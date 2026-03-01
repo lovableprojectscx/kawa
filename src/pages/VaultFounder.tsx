@@ -67,7 +67,10 @@ const VaultFounder = () => {
   const burnoutDetected = logs.slice(0, 3).filter((e) => e.energy_level === "low").length >= 2;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    const d = new Date(dateString);
+    const date = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+    const time = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    return { date, time };
   };
 
   return (
@@ -164,7 +167,10 @@ const VaultFounder = () => {
                 key={entry.id}
                 className="flex items-start gap-4 px-4 py-4 rounded-md bg-muted/30 border border-border/50"
               >
-                <span className="text-xs text-muted-foreground font-display w-14 pt-0.5">{formatDate(entry.checkin_date)}</span>
+                <div className="flex flex-col w-14 shrink-0 pt-0.5">
+                  <span className="text-xs text-muted-foreground font-display">{formatDate(entry.checkin_date).date}</span>
+                  <span className="text-[10px] text-muted-foreground/50 font-mono">{formatDate(entry.checkin_date).time}</span>
+                </div>
                 <div className="pt-0.5">{moodIcon(entry.mood_score)}</div>
                 <div className="flex-1">
                   <p className="text-sm text-foreground font-light">{entry.notes || "Sin notas"}</p>

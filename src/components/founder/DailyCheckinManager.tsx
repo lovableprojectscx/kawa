@@ -16,23 +16,6 @@ export const DailyCheckinManager = () => {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const { count, error } = await supabase
-            .from("vault_founder_energy")
-            .select("*", { count: "exact", head: true })
-            .eq("user_id", user.id)
-            .gte("checkin_date", today.toISOString())
-            .lt("checkin_date", tomorrow.toISOString());
-
-        if (error) {
-            console.error("Error checking daily log:", error);
-            return;
-        }
-
         // No mostrar si el usuario es nuevo (OnboardingWizard ya lo maneja)
         const { data: visionData } = await supabase
             .from("vault_vision")
@@ -45,8 +28,29 @@ export const DailyCheckinManager = () => {
             return;
         }
 
-        if (count === 0) {
-            const hour = new Date().getHours();
+        // Obtener el último check-in
+        const { data: lastEntry, error } = await supabase
+            .from("vault_founder_energy")
+            .select("checkin_date")
+            .eq("user_id", user.id)
+            .order("checkin_date", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+        if (error) {
+            console.error("Error checking daily log:", error);
+            setChecked(true);
+            return;
+        }
+
+        const now = new Date();
+        const hoursSinceLast = lastEntry
+            ? (now.getTime() - new Date(lastEntry.checkin_date).getTime()) / (1000 * 60 * 60)
+            : Infinity;
+
+        // Mostrar si no hay check-in hoy o pasaron más de 4 horas
+        if (hoursSinceLast >= 4) {
+            const hour = now.getHours();
             const greeting =
                 hour < 12 ? "¿Cómo empezaste el día?"
                 : hour < 18 ? "¿Cómo va tu energía esta tarde?"

@@ -86,7 +86,7 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                         name: projectName.trim(),
                         description: projectDescription.trim() || null,
                         status: "active",
-                        priority: "high",
+                        priority: 4,
                     });
                 if (projectError) throw projectError;
             }

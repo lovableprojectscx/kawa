@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { MessageSquare, ArrowUp, Bot, User, Loader2, Bookmark, BookmarkCheck, Trash2 } from "lucide-react";
+import { MessageSquare, ArrowUp, Bot, User, Loader2, Bookmark, BookmarkCheck, Trash2, Mic, MicOff } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { chatService } from "@/lib/chatService";
 import { supabase } from "@/lib/supabase";
@@ -24,7 +24,9 @@ const Chat = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isListening, setIsListening] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -88,6 +90,53 @@ const Chat = () => {
       console.error("Error saving insight:", error);
       toast.error("Error al guardar el insight");
     }
+  };
+
+  const toggleListening = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      toast.error("Tu navegador no soporta reconocimiento de voz. Usa Chrome o Edge.");
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = "es-ES";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = (e: any) => {
+      setIsListening(false);
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        toast.error("Error al escuchar: " + e.error);
+      }
+    };
+    recognition.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
+      setInput(transcript);
+      // Auto-enviar tras reconocimiento
+      setTimeout(() => {
+        setMessages((prev) => [...prev, { role: "user", text: transcript }]);
+        setLoading(true);
+        chatService.sendMessage(transcript, messages).then((responseText) => {
+          setMessages((prev) => [...prev, { role: "assistant", text: responseText, vault: "Orquestador" }]);
+        }).catch(() => {
+          toast.error("Error al conectar con KAWA");
+        }).finally(() => {
+          setLoading(false);
+          setInput("");
+        });
+      }, 100);
+    };
+
+    recognition.start();
   };
 
   const handleSend = async () => {
@@ -265,16 +314,28 @@ const Chat = () => {
         <div className="max-w-3xl mx-auto flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3 focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all shadow-lg">
           <input
             type="text"
-            placeholder={loading ? "KAWA está pensando..." : "Escribe tu consulta..."}
+            placeholder={isListening ? "Escuchando..." : loading ? "KAWA está pensando..." : "Escribe o habla tu consulta..."}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
-            disabled={loading}
+            disabled={loading || isListening}
             className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none font-light"
           />
           <button
+            onClick={toggleListening}
+            disabled={loading}
+            title={isListening ? "Detener escucha" : "Hablar con KAWA"}
+            className={`p-2 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              isListening
+                ? "text-rose-400 bg-rose-400/10 hover:bg-rose-400/20 animate-pulse"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+            }`}
+          >
+            {isListening ? <MicOff className="w-4 h-4" strokeWidth={2} /> : <Mic className="w-4 h-4" strokeWidth={2} />}
+          </button>
+          <button
             onClick={handleSend}
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || isListening}
             className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             <ArrowUp className="w-4 h-4" strokeWidth={2} />

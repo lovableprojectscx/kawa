@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 import { generateEmbedding } from "./gemini";
+import { toast } from "sonner";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,7 @@ interface Contact {
   name: string;
   role?: string;
   personal_facts?: string;
+  last_interaction_summary?: string;
 }
 
 interface ContextData {
@@ -246,13 +248,23 @@ RESPONSE FORMAT (JSON ONLY):
     if (error) throw error;
 
     const textResponse = (data as { text: string }).text;
-    const cleanJson = textResponse.replace(/```json|```/g, "").trim();
+
+    // Improved JSON cleaning: find the first { and last } to isolate the JSON object
+    const startIdx = textResponse.indexOf('{');
+    const endIdx = textResponse.lastIndexOf('}');
+
+    if (startIdx === -1 || endIdx === -1) {
+      console.warn("Smart Router: No JSON found in response", textResponse);
+      return;
+    }
+
+    const cleanJson = textResponse.substring(startIdx, endIdx + 1);
     let extracted: ExtractedData;
 
     try {
       extracted = JSON.parse(cleanJson) as ExtractedData;
-    } catch {
-      console.warn("Router response was not valid JSON:", cleanJson);
+    } catch (e) {
+      console.error("Smart Router: Failed to parse JSON", e, cleanJson);
       return;
     }
 
@@ -262,17 +274,18 @@ RESPONSE FORMAT (JSON ONLY):
 
     if (alignment?.score < 3) {
       console.warn("STRATEGIC CONFLICT DETECTED:", alignment.reasoning);
-      await supabase.from("vault_memories").insert({
+      const { error } = await supabase.from("vault_memories").insert({
         user_id: user.id,
         content: `ALERTA DE ALINEACIÓN: ${alignment.reasoning}`,
         memory_date: new Date().toISOString(),
         type: "decision",
         embedding: await generateEmbedding(alignment.reasoning),
       });
+      if (!error) toast.warning("Alerta de Alineación guardada", { description: alignment.reasoning });
     }
 
     if (type === "event" && extractedData.event_title) {
-      await supabase.from("vault_operator_calendar_events").insert({
+      const { error } = await supabase.from("vault_operator_calendar_events").insert({
         user_id: user.id,
         event_title: extractedData.event_title,
         start_time: extractedData.start_time || new Date().toISOString(),
@@ -281,24 +294,30 @@ RESPONSE FORMAT (JSON ONLY):
         ).toISOString(),
         type: extractedData.type || "meeting",
       });
+      if (!error) toast.success(`Evento guardado: ${extractedData.event_title}`);
+      else console.error("Error saving event:", error);
     } else if (type === "contact" && extractedData.name) {
       const embedding = await generateEmbedding(extractedData.personal_facts || extractedData.name);
-      await supabase.from("vault_context_people").insert({
+      const { error } = await supabase.from("vault_context_people").insert({
         user_id: user.id,
         name: extractedData.name,
         role: extractedData.role || "Contact",
         personal_facts: embedding,
         last_interaction_summary: `Added via chat: ${extractedData.personal_facts ?? ""}`,
       });
+      if (!error) toast.success(`Contacto guardado: ${extractedData.name}`);
+      else console.error("Error saving contact:", error);
     } else if (type === "memory" && extractedData.content) {
       const embedding = await generateEmbedding(extractedData.content);
-      await supabase.from("vault_memories").insert({
+      const { error } = await supabase.from("vault_memories").insert({
         user_id: user.id,
         content: extractedData.content,
         memory_date: new Date().toISOString(),
         type: extractedData.category || "situation",
         embedding,
       });
+      if (!error) toast.success("Memoria guardada automáticamente");
+      else console.error("Error saving memory:", error);
     }
   } catch (e) {
     console.error("Smart Router Error:", e);
@@ -318,16 +337,16 @@ const buildSystemPrompt = (context: ContextData): string => {
   const taskSummary =
     tasks.length > 0
       ? tasks
-          .slice(0, 10)
-          .map((t) => `- [ ] ${t.name} (Project ID: ${t.project_id})`)
-          .join("\n")
+        .slice(0, 10)
+        .map((t) => `- [ ] ${t.name} (Project ID: ${t.project_id})`)
+        .join("\n")
       : "No pending tasks.";
 
   const memoryContext =
     memories.length > 0
       ? memories
-          .map((m) => `- [${new Date(m.memory_date).toLocaleDateString()}]: ${m.content}`)
-          .join("\n")
+        .map((m) => `- [${new Date(m.memory_date).toLocaleDateString()}]: ${m.content}`)
+        .join("\n")
       : "No persistent memories.";
 
   const docContext =
@@ -343,11 +362,11 @@ const buildSystemPrompt = (context: ContextData): string => {
   const energyContext =
     energy.length > 0
       ? energy
-          .map(
-            (e) =>
-              `- [${new Date(e.created_at).toLocaleDateString()}]: Energy ${e.energy_level}/5, Mood ${e.mood_score}/5`
-          )
-          .join("\n")
+        .map(
+          (e) =>
+            `- [${new Date(e.created_at).toLocaleDateString()}]: Energy ${e.energy_level}/5, Mood ${e.mood_score}/5`
+        )
+        .join("\n")
       : "No recent energy logs.";
 
   const contactsContext =

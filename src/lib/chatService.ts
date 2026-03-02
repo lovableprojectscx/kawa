@@ -215,15 +215,17 @@ const extractAndRouteContext = async (message: string, aiResponse: string): Prom
 
     const routerSystemInstruction = `You are a professional Strategic Data Router. Analyze the conversation and extract structured information while evaluating alignment with the user's VISION (North Star and Anti-Goals).
 
-EXTRACT ONLY IF NEW AND EXPLICIT:
-1. EVENT: Meetings, tasks with a date/time.
-2. CONTACT: Names of people, their roles, or important facts.
-3. MEMORY: General situations, decisions, or daily habits.
+EXTRACT ONLY IF NEW, EXPLICIT AND RELEVANT:
+1. EVENT: Meetings, tasks or commitments with a specific date/time.
+2. CONTACT: Names of people, their roles, or important facts about them. 
+3. MEMORY: General situations, personal decisions, progress, or daily habits.
 
 EVALUATE ALIGNMENT:
 Compare the user's action/request with their Vision context.
 - alignment_score: 1 (Conflicts with Vision/Anti-Goals) to 5 (Perfectly Aligned).
 - alignment_reasoning: Concise explanation of why it aligns or conflicts.
+
+CRITICAL: ALWAYS respond with a valid JSON object. If no new data is found, set type to "none". Do not add any text outside the JSON.
 
 RESPONSE FORMAT (JSON ONLY):
 {
@@ -232,7 +234,11 @@ RESPONSE FORMAT (JSON ONLY):
     "score": number,
     "reasoning": "string"
   },
-  "data": {}
+  "data": {
+    // For event: event_title, start_time (ISO), type
+    // For contact: name, role, personal_facts
+    // For memory: content, category
+  }
 }`;
 
     const prompt = `CURRENT TIME: ${new Date().toISOString()}\nConversation:\nUser: ${message}\nAI: ${aiResponse}\n\nRoute and extract data:`;
@@ -281,7 +287,12 @@ RESPONSE FORMAT (JSON ONLY):
         type: "decision",
         embedding: await generateEmbedding(alignment.reasoning),
       });
-      if (!error) toast.warning("Alerta de Alineación guardada", { description: alignment.reasoning });
+      if (!error) {
+        toast.warning("Alerta de Alineación", {
+          description: alignment.reasoning,
+          duration: 5000
+        });
+      }
     }
 
     if (type === "event" && extractedData.event_title) {

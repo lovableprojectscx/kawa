@@ -125,7 +125,7 @@ const UploadData = () => {
           Subir Datos
         </h1>
         <p className="text-sm text-muted-foreground font-light mt-1">
-          Alimenta tus bóvedas con archivos PDF, texto o notas escritas.
+          Alimenta a KAWA con archivos PDF, texto o notas escritas.
         </p>
       </motion.div>
 
@@ -133,7 +133,7 @@ const UploadData = () => {
       <div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-primary/5 border border-primary/10">
         <Bot className="w-4 h-4 text-primary shrink-0" strokeWidth={1.5} />
         <p className="text-xs text-muted-foreground font-light">
-          KAWA clasificará automáticamente tu información en la bóveda correcta.
+          KAWA indexará tu información y la recordará en futuras conversaciones.
         </p>
       </div>
 

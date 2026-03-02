@@ -114,7 +114,7 @@ const VaultVision = () => {
 
       if (error) throw error;
 
-      toast.success("Bóveda de Visión actualizada");
+      toast.success("Estrategia guardada");
       setIsEditing(false);
       fetchVision();
     } catch (error) {
@@ -162,7 +162,7 @@ const VaultVision = () => {
   };
 
 
-  if (loading) return <div className="p-8 text-center">Cargando Bóveda...</div>;
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Cargando...</div>;
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto pb-20">

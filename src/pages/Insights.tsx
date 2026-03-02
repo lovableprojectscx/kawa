@@ -63,15 +63,14 @@ const Insights = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-primary">
-                        <Bookmark className="w-5 h-5" />
-                        <span className="text-xs font-display tracking-[0.2em] uppercase font-bold">Bóveda de Sabiduría</span>
+                    <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 rounded-md bg-primary/10">
+                            <Bookmark className="w-6 h-6 text-primary" strokeWidth={1.5} />
+                        </div>
+                        <h1 className="text-3xl text-foreground">Mis Insights</h1>
                     </div>
-                    <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight">
-                        Mis <span className="text-gradient">Insights</span>
-                    </h1>
-                    <p className="text-muted-foreground font-light max-w-md">
-                        Aquí se encuentran los consejos, decisiones y análisis que has decidido guardar para el largo plazo.
+                    <p className="text-muted-foreground font-light">
+                        Decisiones, aprendizajes y análisis guardados desde el chat.
                     </p>
                 </div>
 

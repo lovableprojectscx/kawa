@@ -9,14 +9,14 @@ import remarkGfm from "remark-gfm";
 
 type Message = { role: "user" | "assistant"; text: string; vault?: string; saved?: boolean };
 
-const INITIAL_MESSAGE: Message = { role: "assistant", text: "Hola, soy KAWA. Tu agente orquestador. Tengo acceso a tus Bóvedas (Visión y Operador) para ayudarte a ejecutar tu estrategia. ¿En qué trabajamos hoy?" };
+const INITIAL_MESSAGE: Message = { role: "assistant", text: "Hola, soy KAWA. Conozco tu estrategia, proyectos, energía y contactos. Puedo ayudarte a tomar decisiones, priorizar, prepararte para reuniones o simplemente pensar en voz alta. ¿En qué trabajamos hoy?" };
 const initialMessages: Message[] = [INITIAL_MESSAGE];
 
 const suggestions = [
   "¿Qué proyectos tengo activos?",
-  "¿Cuáles son mis anti-goals?",
-  "Ayúdame a priorizar mis tareas",
-  "Revisa si mi último proyecto se alinea con mi North Star",
+  "Ayúdame a priorizar mis tareas de hoy",
+  "¿Mis proyectos actuales se alinean con mi North Star?",
+  "Dame un resumen de mi situación actual",
 ];
 
 const Chat = () => {
@@ -82,7 +82,7 @@ const Chat = () => {
 
       if (error) throw error;
 
-      toast.success("Insight guardado en tu Bitácora");
+      toast.success("Insight guardado");
 
       // Mark as saved locally for UI feedback (optional but nice)
       setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, saved: true } : msg));
@@ -180,7 +180,7 @@ const Chat = () => {
 
         <div className="ml-auto flex items-center gap-2">
           <span className="text-[10px] text-primary/70 font-display tracking-wider hidden md:block uppercase bg-primary/5 px-2 py-1 rounded-md border border-primary/10">
-            Contexto: Full-System (4 Bóvedas)
+            Contexto completo activo
           </span>
           {messages.length > 1 && (
             <button
@@ -247,7 +247,7 @@ const Chat = () => {
                             ) : (
                               <>
                                 <Bookmark className="w-3 h-3" />
-                                Guardar en Bitácora
+                                Guardar Insight
                               </>
                             )}
                           </button>

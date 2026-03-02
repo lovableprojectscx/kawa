@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
-import { Globe, Search, User, Calendar, MessageSquare, Plus, Clock, Pencil } from "lucide-react";
+import { Globe, Search, User, Calendar, MessageSquare, Plus, Clock, Pencil, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { AddPersonDialog } from "@/components/context/AddPersonDialog";
 import { EditPersonDialog } from "@/components/context/EditPersonDialog";
@@ -37,6 +38,7 @@ const VaultContext = () => {
   const [loading, setLoading] = useState(true);
   const [editContact, setEditContact] = useState<Contact | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const navigate = useNavigate();
 
   const fetchContacts = async () => {
     try {
@@ -211,13 +213,18 @@ const VaultContext = () => {
           <div className="bg-card border border-border rounded-lg p-5">
             <div className="flex items-center gap-2 mb-4">
               <MessageSquare className="w-5 h-5 text-sky-400" strokeWidth={1.5} />
-              <h2 className="font-display text-foreground text-sm tracking-wider uppercase">Briefing IA</h2>
+              <h2 className="font-display text-foreground text-sm tracking-wider uppercase">Preparar Reunión</h2>
             </div>
-            <div className="bg-sky-400/5 border border-sky-400/20 rounded-md p-4">
-              <p className="text-xs text-muted-foreground font-light leading-relaxed">
-                <span className="text-foreground">KAWA:</span> Al agregar personas clave, podré recordarte detalles importantes antes de reunirte con ellos.
-              </p>
-            </div>
+            <p className="text-xs text-muted-foreground font-light leading-relaxed mb-4">
+              Pídele a KAWA que te prepare un briefing antes de reunirte con alguien de tu red.
+            </p>
+            <button
+              onClick={() => navigate("/chat")}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-sky-400/5 border border-sky-400/20 text-xs text-sky-400 hover:bg-sky-400/10 transition-colors group"
+            >
+              <span>Preparar mi próxima reunión con KAWA</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            </button>
           </div>
         </div>
       </div>

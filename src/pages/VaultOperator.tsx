@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { Plus, Calendar, CheckCircle, Clock, X } from "lucide-react";
+import { Plus, Calendar, ListTodo, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -136,7 +136,7 @@ const VaultOperator = () => {
               Proyectos
             </h1>
             <p className="text-muted-foreground mt-2">
-              Sistema de Ejecución y Capacidad.
+              Tu centro de control de proyectos y tareas.
             </p>
           </div>
           <CreateProjectDialog onProjectCreated={handleProjectCreated} />
@@ -161,10 +161,10 @@ const VaultOperator = () => {
             </div>
           </div>
 
-          <div className="bg-card/50 backdrop-blur-sm border border-white/10 p-6 rounded-xl hover:border-green-500/30 transition-colors">
+          <div className="bg-card/50 backdrop-blur-sm border border-white/10 p-6 rounded-xl hover:border-amber-400/30 transition-colors">
             <div className="flex items-center gap-4 mb-2">
-              <div className="p-3 bg-green-500/20 rounded-lg text-green-500">
-                <CheckCircle className="w-6 h-6" />
+              <div className="p-3 bg-amber-400/10 rounded-lg text-amber-400">
+                <ListTodo className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tareas Pendientes</p>

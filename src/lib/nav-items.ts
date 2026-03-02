@@ -4,10 +4,10 @@ import {
   CalendarDays,
   Upload,
   Telescope,
-  Settings,
   Heart,
   Globe,
   Bookmark,
+  Briefcase,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -21,7 +21,7 @@ export interface NavItem {
 export const mainItems: NavItem[] = [
   { to: "/chat", icon: MessageSquare, label: "Chat IA" },
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/vault/operator", icon: Settings, label: "Proyectos" },
+  { to: "/vault/operator", icon: Briefcase, label: "Proyectos" },
   { to: "/vault/founder", icon: Heart, label: "Bienestar" },
 ];
 

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Telescope, Settings, Heart, Globe, TrendingUp, Calendar, Zap, AlertTriangle, ArrowUp, Bot, Loader2, ArrowRight } from "lucide-react";
+import { Telescope, Briefcase, Heart, Globe, TrendingUp, Calendar, Zap, AlertTriangle, ArrowUp, Bot, Loader2, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
@@ -161,8 +161,8 @@ const Dashboard = () => {
       to: "/vault/vision",
     },
     {
-      icon: Settings,
-      title: "Operador",
+      icon: Briefcase,
+      title: "Proyectos",
       value: data.operator.status,
       detail: data.operator.detail,
       color: "text-emerald-400",

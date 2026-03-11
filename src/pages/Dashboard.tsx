@@ -1,398 +1,471 @@
 import { motion } from "framer-motion";
-import { Telescope, Briefcase, Heart, Globe, TrendingUp, Calendar, Zap, AlertTriangle, ArrowUp, Bot, Loader2, ArrowRight } from "lucide-react";
+import {
+  ArrowRight, Target, Briefcase, Heart, Users, Zap,
+  TrendingUp, CheckCircle2, Clock, MessageSquare, Calendar as CalendarIcon,
+  Brain, Flame, Building2
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner";
-import { chatService } from "@/lib/chatService";
-import ReactMarkdown from "react-markdown";
+import {
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "recharts";
+import { CreateCompanyDialog } from "@/components/operator/CreateCompanyDialog";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface EnergyPoint { day: string; mood: number; energy: number; label: string; }
+interface ProjectStat { name: string; value: number; color: string; }
+interface ActivityItem { icon: string; text: string; time: string; type: string; }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const getGreeting = () => {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return "Buenos días";
+  if (h >= 12 && h < 19) return "Buenas tardes";
+  return "Buenas noches";
+};
+
+const dayLabel = (dateStr: string) => {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("es-ES", { weekday: "short" }).slice(0, 3).toUpperCase();
+};
+
+const energyToNum = (e: string) => e === "high" ? 3 : e === "medium" ? 2 : 1;
+const energyColor = (e: string) => e === "high" ? "#10b981" : e === "medium" ? "#f59e0b" : "#ef4444";
+const STATUS_COLORS: Record<string, string> = {
+  active: "#6366f1", in_progress: "#8b5cf6", completed: "#10b981",
+  paused: "#f59e0b", backlog: "#64748b",
+};
+const STATUS_LABELS: Record<string, string> = {
+  active: "Activo", in_progress: "En Progreso", completed: "Completado",
+  paused: "Pausado", backlog: "Backlog",
+};
+
+// ─── Custom Tooltip ───────────────────────────────────────────────────────────
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-card border border-border rounded-xl px-3 py-2 text-xs shadow-lg">
+      <p className="text-muted-foreground mb-1">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} style={{ color: p.color }} className="font-medium">
+          {p.name}: {p.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+// ─── Dashboard ────────────────────────────────────────────────────────────────
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [userName, setUserName] = useState("Fundador");
+  const [userName, setUserName] = useState("");
 
-  const getGreeting = () => {
-    const h = new Date().getHours();
-    if (h >= 5 && h < 12) return "Buenos días";
-    if (h >= 12 && h < 19) return "Buenas tardes";
-    return "Buenas noches";
-  };
+  // Core metrics
+  const [activeProjects, setActiveProjects] = useState(0);
+  const [pendingTasks, setPendingTasks] = useState(0);
+  const [companies, setCompanies] = useState<{ id: string, name: string, vision: string, mision: string, color: string }[]>([]);
+  const [contactsCount, setContactsCount] = useState(0);
+  const [memoriesCount, setMemoriesCount] = useState(0);
 
-  // Chat widget state
-  const [chatInput, setChatInput] = useState("");
-  const [chatReply, setChatReply] = useState("");
-  const [chatLoading, setChatLoading] = useState(false);
-
-  const handleQuickChat = async () => {
-    if (!chatInput.trim() || chatLoading) return;
-    const message = chatInput;
-    setChatInput("");
-    setChatLoading(true);
-    setChatReply("");
-    try {
-      const reply = await chatService.sendMessage(message);
-      setChatReply(reply);
-    } catch {
-      toast.error("Error al conectar con KAWA");
-    } finally {
-      setChatLoading(false);
-    }
-  };
-  const [data, setData] = useState({
-    vision: { status: "Offline", detail: "Sin datos" },
-    operator: { status: "0 Proyectos", detail: "Sin actividad" },
-    founder: { status: "Sin datos", detail: "Sin registros hoy", energyHistory: [] as number[] },
-    context: { status: "0 Contactos", detail: "Sin reuniones" },
-    agenda: [] as any[],
-    alerts: [] as any[]
-  });
+  // Chart data
+  const [energyData, setEnergyData] = useState<EnergyPoint[]>([]);
+  const [projectStats, setProjectStats] = useState<ProjectStat[]>([]);
+  const [latestEnergy, setLatestEnergy] = useState<{ level: string; mood: number; note?: string } | null>(null);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
+  const [todayEvents, setTodayEvents] = useState<{ event_title: string; start_time: string }[]>([]);
 
   useEffect(() => {
-    fetchDashboardData();
+    const load = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "";
+        setUserName(name.split(" ")[0]);
+
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+        const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
+
+        const [
+          { data: comps },
+          { data: projects },
+          { count: tasks },
+          { count: contacts },
+          { count: memories },
+          { data: energyLogs },
+          { data: events },
+          { data: recentMems },
+          { data: recentInsights },
+          { data: recentEvents },
+        ] = await Promise.all([
+          supabase.from("vault_companies").select("*").eq("user_id", user.id).order("name"),
+          supabase.from("vault_operator_projects").select("status, name").eq("user_id", user.id),
+          supabase.from("vault_operator_tasks").select("*", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "pending"),
+          supabase.from("vault_context_people").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+          supabase.from("vault_memories").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+          supabase.from("vault_founder_energy").select("energy_level, mood_score, checkin_date, notes").eq("user_id", user.id).gte("checkin_date", sevenDaysAgo.toISOString()).order("checkin_date", { ascending: true }),
+          supabase.from("vault_operator_calendar_events").select("event_title, start_time").eq("user_id", user.id).gte("start_time", today.toISOString()).lt("start_time", tomorrow.toISOString()).order("start_time", { ascending: true }),
+          supabase.from("vault_memories").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(3),
+          supabase.from("vault_insights").select("content, created_at").eq("user_id", user.id).order("created_at", { ascending: false }).limit(2),
+          supabase.from("vault_operator_calendar_events").select("event_title, start_time").eq("user_id", user.id).order("start_time", { ascending: false }).limit(2),
+        ]);
+
+        // Metrics
+        setCompanies(comps || []);
+        setActiveProjects(projects?.filter(p => ["active", "in_progress"].includes(p.status)).length || 0);
+        setPendingTasks(tasks || 0);
+        setContactsCount(contacts || 0);
+        setMemoriesCount(memories || 0);
+        setTodayEvents(events || []);
+
+        // Energy chart (last 7 days)
+        if (energyLogs && energyLogs.length > 0) {
+          const last = energyLogs[energyLogs.length - 1];
+          setLatestEnergy({ level: last.energy_level, mood: last.mood_score, note: last.notes });
+          setEnergyData(energyLogs.map(e => ({
+            day: dayLabel(e.checkin_date),
+            mood: e.mood_score,
+            energy: energyToNum(e.energy_level),
+            label: e.energy_level,
+          })));
+        }
+
+        // Project status pie
+        const statusMap: Record<string, number> = {};
+        projects?.forEach(p => { statusMap[p.status] = (statusMap[p.status] || 0) + 1; });
+        setProjectStats(Object.entries(statusMap).map(([k, v]) => ({
+          name: STATUS_LABELS[k] || k,
+          value: v,
+          color: STATUS_COLORS[k] || "#64748b",
+        })));
+
+        // Activity feed
+        const feed: ActivityItem[] = [];
+        recentMems?.forEach(m => feed.push({ icon: "🧠", text: m.content.slice(0, 70) + (m.content.length > 70 ? "..." : ""), time: m.created_at, type: "memory" }));
+        recentInsights?.forEach(i => feed.push({ icon: "💡", text: i.content.slice(0, 70) + (i.content.length > 70 ? "..." : ""), time: i.created_at, type: "insight" }));
+        recentEvents?.forEach(e => feed.push({ icon: "📅", text: e.event_title, time: e.start_time, type: "event" }));
+        feed.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
+        setRecentActivity(feed.slice(0, 5));
+
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      // User display name
-      const fullName = user.user_metadata?.full_name || user.user_metadata?.name;
-      if (fullName) {
-        setUserName(fullName.split(" ")[0]);
-      } else if (user.email) {
-        setUserName(user.email.split("@")[0]);
-      }
-
-      // 1. Vision
-      const { data: vision } = await supabase.from('vault_vision').select('*').eq('user_id', user.id).maybeSingle();
-
-      // 2. Operator
-      const { data: projects } = await supabase.from('vault_operator_projects').select('*').eq('user_id', user.id);
-      const activeProjects = projects?.filter(p => p.status === 'active').length || 0;
-
-      // 3. Founder
-      const { data: energyLogs } = await supabase
-        .from('vault_founder_energy')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('checkin_date', { ascending: false })
-        .limit(7);
-
-      const latestEnergy = energyLogs?.[0];
-      const energyHistory = energyLogs?.slice().reverse().map(l => {
-        if (l.energy_level === 'high') return 5;
-        if (l.energy_level === 'medium') return 3;
-        return 1;
-      }) || [];
-
-      // 4. Context
-      const { data: contacts } = await supabase.from('vault_context_people').select('id').eq('user_id', user.id);
-
-      // 5. Agenda
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const { data: events } = await supabase
-        .from('vault_operator_calendar_events')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('start_time', today.toISOString())
-        .lt('start_time', tomorrow.toISOString())
-        .order('start_time', { ascending: true });
-
-      // 6. Alerts (Dynamic)
-      const newAlerts = [];
-      if (latestEnergy && (latestEnergy.energy_level === 'low')) {
-        newAlerts.push({ icon: AlertTriangle, text: "Energía baja detectada", level: "warn" });
-      }
-
-      const { count: pendingTasks } = await supabase
-        .from('vault_operator_tasks')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('status', 'pending');
-
-      if (pendingTasks && pendingTasks > 0) {
-        newAlerts.push({ icon: Zap, text: `Tienes ${pendingTasks} tareas pendientes`, level: "info" });
-      }
-
-      setData({
-        vision: {
-          status: vision ? "Alineado" : "Pendiente",
-          detail: vision ? (vision.north_star ? "North Star definido" : "Falta North Star") : "Configura tu visión"
-        },
-        operator: {
-          status: `${projects?.length || 0} Proyectos`,
-          detail: `${activeProjects} activos actualmente`
-        },
-        founder: {
-          status: latestEnergy ? `Estado: ${latestEnergy.mood_score}/5` : "Sin datos",
-          detail: latestEnergy ? `Última energía: ${latestEnergy.energy_level}` : "Realiza tu check-in",
-          energyHistory
-        },
-        context: {
-          status: `${contacts?.length || 0} Contactos`,
-          detail: contacts?.length ? "Red activa" : "Sin red documentada"
-        },
-        agenda: events || [],
-        alerts: newAlerts
-      });
-
-    } catch (error) {
-      console.error("Dashboard error:", error);
-      toast.error("Error al cargar datos del dashboard");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const vaultSummaries = [
-    {
-      icon: Telescope,
-      title: "Visión",
-      value: data.vision.status,
-      detail: data.vision.detail,
-      color: "text-primary",
-      bg: "bg-primary/10",
-      to: "/vault/vision",
-    },
-    {
-      icon: Briefcase,
-      title: "Proyectos",
-      value: data.operator.status,
-      detail: data.operator.detail,
-      color: "text-emerald-400",
-      bg: "bg-emerald-400/10",
-      to: "/vault/operator",
-    },
-    {
-      icon: Heart,
-      title: "Fundador",
-      value: data.founder.status,
-      detail: data.founder.detail,
-      color: "text-amber-400",
-      bg: "bg-amber-400/10",
-      to: "/vault/founder",
-    },
-    {
-      icon: Globe,
-      title: "Contexto",
-      value: data.context.status,
-      detail: data.context.detail,
-      color: "text-sky-400",
-      bg: "bg-sky-400/10",
-      to: "/vault/context",
-    },
-  ];
-
-  const formatTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-  };
 
   if (loading) return (
     <div className="flex h-[80vh] items-center justify-center">
-      <div className="w-10 h-10 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+      <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
     </div>
   );
 
+  const alignmentScore = companies.length > 0
+    ? Math.min(100, 40 + (companies.length * 10) + (activeProjects * 5))
+    : 0;
+
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-10"
-      >
-        <h1 className="text-3xl md:text-4xl text-foreground">{getGreeting()}, {userName}</h1>
-        <p className="mt-2 text-muted-foreground font-light">
-          {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })} · Tu panorama del día.
-        </p>
-      </motion.div>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-5xl mx-auto px-4 md:px-8 py-8 space-y-8">
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {vaultSummaries.map((v, i) => (
-          <motion.div
-            key={v.title}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: i * 0.08 }}
-            onClick={() => navigate(v.to)}
-            className="bg-card border border-border rounded-lg p-5 cursor-pointer transition-all duration-300 hover:border-primary/30 hover:neon-glow group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <div className={`p-2 rounded-md ${v.bg}`}>
-                <v.icon className={`w-5 h-5 ${v.color}`} strokeWidth={1.5} />
-              </div>
-              <span className="text-xs text-muted-foreground font-display tracking-wider uppercase">
-                {v.title}
-              </span>
-            </div>
-            <p className="text-lg text-foreground font-display font-semibold">{v.value}</p>
-            <p className="text-xs text-muted-foreground mt-1 font-light">{v.detail}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Quick Chat Widget */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="mb-8 bg-card border border-border rounded-lg p-5"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Bot className="w-5 h-5 text-primary" strokeWidth={1.5} />
-          <h2 className="text-lg font-display text-foreground">KAWA</h2>
-          <span className="flex items-center gap-1.5 ml-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs text-muted-foreground">Activo</span>
-          </span>
-          <button
-            onClick={() => navigate("/chat")}
-            className="ml-auto flex items-center gap-1 text-xs text-primary hover:underline"
-          >
-            Chat completo <ArrowRight className="w-3 h-3" />
-          </button>
-        </div>
-
-        {chatReply && (
-          <div className="mb-4 px-4 py-3 bg-muted/40 border border-border/50 rounded-xl text-sm text-foreground/90 font-light leading-relaxed prose prose-invert prose-sm max-w-none">
-            <ReactMarkdown>{chatReply}</ReactMarkdown>
-          </div>
-        )}
-
-        <div className="flex items-center gap-3 bg-background border border-border rounded-lg px-4 py-2.5 focus-within:border-primary/40 transition-all">
-          <input
-            type="text"
-            placeholder={chatLoading ? "KAWA está pensando..." : "Pregunta algo a KAWA..."}
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleQuickChat()}
-            disabled={chatLoading}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none font-light"
-          />
-          <button
-            onClick={handleQuickChat}
-            disabled={chatLoading || !chatInput.trim()}
-            className="p-1.5 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {chatLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4" strokeWidth={2} />}
-          </button>
-        </div>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-          className="lg:col-span-2 bg-card border border-border rounded-lg p-6"
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <Calendar className="w-5 h-5 text-primary" strokeWidth={1.5} />
-            <h2 className="text-lg font-display text-foreground">Agenda de Hoy</h2>
-          </div>
-          <div className="space-y-3">
-            {data.agenda.length > 0 ? (
-              data.agenda.map((event, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-4 px-4 py-3 rounded-md bg-muted/50 border border-border/50"
-                >
-                  <span className="text-sm text-primary font-display font-semibold w-14">
-                    {formatTime(event.start_time)}
-                  </span>
-                  <span className="text-sm text-foreground font-light flex-1">{event.event_title}</span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-display tracking-wider uppercase ${event.type === "meeting"
-                        ? "bg-sky-400/10 text-sky-400"
-                        : event.type === "block"
-                          ? "bg-amber-400/10 text-amber-400"
-                          : "bg-primary/10 text-primary"
-                      }`}
-                  >
-                    {event.type}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground text-sm italic">
-                No hay eventos programados para hoy.
-              </div>
-            )}
-          </div>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="bg-card border border-border rounded-lg p-6"
-        >
-          <div className="flex items-center gap-2 mb-5">
-            <Zap className="w-5 h-5 text-primary" strokeWidth={1.5} />
-            <h2 className="text-lg font-display text-foreground">Alertas</h2>
-          </div>
-          <div className="space-y-3">
-            {data.alerts.length > 0 ? (
-              data.alerts.map((alert, i) => (
-                <div
-                  key={i}
-                  className={`flex items-start gap-3 px-4 py-3 rounded-md border ${alert.level === "warn"
-                      ? "bg-amber-400/5 border-amber-400/20"
-                      : "bg-primary/5 border-primary/20"
-                    }`}
-                >
-                  <alert.icon
-                    className={`w-4 h-4 mt-0.5 shrink-0 ${alert.level === "warn" ? "text-amber-400" : "text-primary"
-                      }`}
-                    strokeWidth={1.5}
-                  />
-                  <span className="text-sm text-foreground font-light">{alert.text}</span>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-8 text-muted-foreground text-xs uppercase tracking-widest opacity-50">
-                Sin alertas activas
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6">
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
-              <span className="text-xs text-muted-foreground font-display tracking-wider uppercase">
-                Energía últimos días
-              </span>
-            </div>
-            <div className="flex items-end gap-1 h-16">
-              {data.founder.energyHistory.length > 0 ? (
-                data.founder.energyHistory.map((val, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center gap-1">
-                    <div
-                      className="w-full rounded-sm transition-all"
-                      style={{
-                        height: `${(val / 5) * 100}%`,
-                        backgroundColor:
-                          val <= 1
-                            ? "hsl(0 84% 60%)"
-                            : val <= 3
-                              ? "hsl(45 93% 58%)"
-                              : "hsl(142 71% 45%)",
-                      }}
-                    />
-                  </div>
-                ))
-              ) : (
-                <div className="flex-1 text-[10px] text-muted-foreground italic text-center">Sin historial</div>
+        {/* ── HEADER ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl md:text-3xl font-light text-foreground leading-tight">
+                {getGreeting()}{userName ? `, ${userName}` : ""}.
+              </h1>
+              <p className="mt-0.5 text-muted-foreground font-light text-xs md:text-sm capitalize">
+                {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+              </p>
+              {companies.length > 0 && (
+                <p className="mt-2 text-xs text-primary/70 border-l-2 border-primary/30 pl-3 font-light line-clamp-2 max-w-lg">
+                  Empoderando {companies.length} {companies.length === 1 ? "empresa" : "empresas"} con IA estratégica.
+                </p>
               )}
             </div>
+            <button
+              onClick={() => navigate("/chat")}
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors shrink-0"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Chat IA</span>
+              <span className="sm:hidden">Chat</span>
+            </button>
           </div>
         </motion.div>
+
+        {/* ── KPI CARDS ── */}
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            {[
+              { icon: Building2, label: "Empresas", value: companies.length || "—", sub: "unidades", color: "text-violet-400", href: "/vault/companies" },
+              { icon: Target, label: "Alineación", value: companies.length > 0 ? `${alignmentScore}%` : "—", sub: "estratégica", color: "text-primary", href: "/vault/companies" },
+              { icon: CheckCircle2, label: "Tareas", value: pendingTasks || "—", sub: "pendientes", color: "text-sky-400", href: "/vault/operator" },
+              { icon: Heart, label: "Energía", value: latestEnergy ? `${latestEnergy.mood}/5` : "—", sub: latestEnergy ? (latestEnergy.level === "high" ? "⚡ Alta" : latestEnergy.level === "medium" ? "😐 Media" : "😴 Baja") : "sin registro", color: "text-rose-400", href: "/vault/founder" },
+              { icon: Users, label: "Contactos", value: contactsCount || "—", sub: "en tu red", color: "text-amber-400", href: "/vault/contacts" },
+            ].map((card, i) => (
+              <button
+                key={i}
+                onClick={() => navigate(card.href)}
+                className="flex flex-col items-start p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all text-left group"
+              >
+                <card.icon className={`w-4 h-4 ${card.color} mb-2`} strokeWidth={1.5} />
+                <p className="text-xl font-semibold text-foreground">{card.value}</p>
+                <p className="text-xs text-muted-foreground font-light">{card.label}</p>
+                <p className="text-[10px] text-muted-foreground/50">{card.sub}</p>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* ── CHARTS ROW ── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+          {/* Energy & Mood Chart */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            className="md:col-span-2 bg-card border border-border rounded-xl p-5"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-amber-400" /> Estado de Ánimo y Energía
+                </h2>
+                <p className="text-xs text-muted-foreground font-light">Últimos 7 días</p>
+              </div>
+              {latestEnergy && (
+                <span className="text-xs px-2 py-1 rounded-full border"
+                  style={{ borderColor: energyColor(latestEnergy.level), color: energyColor(latestEnergy.level) }}>
+                  Hoy: {latestEnergy.level === "high" ? "Alta" : latestEnergy.level === "medium" ? "Media" : "Baja"}
+                </span>
+              )}
+            </div>
+            {energyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={180}>
+                <AreaChart data={energyData} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="energyGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis domain={[0, 5]} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="mood" name="Ánimo" stroke="#6366f1" strokeWidth={2} fill="url(#moodGrad)" dot={{ fill: "#6366f1", r: 3 }} />
+                  <Area type="monotone" dataKey="energy" name="Energía" stroke="#f59e0b" strokeWidth={2} fill="url(#energyGrad)" dot={{ fill: "#f59e0b", r: 3 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[180px] flex flex-col items-center justify-center text-center">
+                <Heart className="w-8 h-8 text-muted-foreground/30 mb-2" strokeWidth={1} />
+                <p className="text-sm text-muted-foreground/50 font-light">Sin check-ins de energía aún</p>
+                <button onClick={() => navigate("/vault/founder")} className="mt-2 text-xs text-primary hover:underline">Registrar ahora →</button>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Project Status Donut */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="bg-card border border-border rounded-xl p-5"
+          >
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2 mb-1">
+              <Briefcase className="w-4 h-4 text-indigo-400" /> Proyectos
+            </h2>
+            <p className="text-xs text-muted-foreground font-light mb-4">por estado</p>
+            {projectStats.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={130}>
+                  <PieChart>
+                    <Pie data={projectStats} cx="50%" cy="50%" innerRadius={35} outerRadius={55}
+                      dataKey="value" paddingAngle={3}>
+                      {projectStats.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v: number, n: string) => [v, n]} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="space-y-1.5 mt-2">
+                  {projectStats.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
+                        <span className="text-muted-foreground">{s.name}</span>
+                      </div>
+                      <span className="font-medium text-foreground">{s.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="h-[160px] flex flex-col items-center justify-center text-center">
+                <Briefcase className="w-8 h-8 text-muted-foreground/30 mb-2" strokeWidth={1} />
+                <p className="text-sm text-muted-foreground/50 font-light">Sin proyectos aún</p>
+                <button onClick={() => navigate("/vault/operator")} className="mt-2 text-xs text-primary hover:underline">Crear proyecto →</button>
+              </div>
+            )}
+          </motion.div>
+        </div>
+
+        {/* ── BOTTOM ROW ── */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          {/* Activity Feed */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+            className="bg-card border border-border rounded-xl p-5"
+          >
+            <h2 className="text-sm font-medium text-foreground flex items-center gap-2 mb-4">
+              <Brain className="w-4 h-4 text-violet-400" /> Actividad Reciente del Cerebro
+            </h2>
+            {recentActivity.length > 0 ? (
+              <div className="space-y-3">
+                {recentActivity.map((item, i) => (
+                  <div key={i} className="flex gap-3 items-start">
+                    <span className="text-base leading-none mt-0.5">{item.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs text-foreground font-light leading-relaxed truncate">{item.text}</p>
+                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                        {new Date(item.time).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                        {" · "}
+                        <span className={item.type === "memory" ? "text-violet-400" : item.type === "insight" ? "text-amber-400" : "text-sky-400"}>
+                          {item.type === "memory" ? "Memoria" : item.type === "insight" ? "Aprendizaje" : "Evento"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="h-[120px] flex flex-col items-center justify-center text-center">
+                <Brain className="w-8 h-8 text-muted-foreground/30 mb-2" strokeWidth={1} />
+                <p className="text-sm text-muted-foreground/50 font-light">Empieza a chatear para crear memorias</p>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Today + Quick Links */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
+            className="flex flex-col gap-4"
+          >
+            {/* Today's Events */}
+            <div className="bg-card border border-border rounded-xl p-5 flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <CalendarIcon className="w-4 h-4 text-sky-400" /> Hoy
+                </h2>
+                <button onClick={() => navigate("/calendar")} className="text-xs text-muted-foreground hover:text-primary transition-colors">Ver todo →</button>
+              </div>
+              {todayEvents.length > 0 ? (
+                <div className="space-y-2">
+                  {todayEvents.map((ev, i) => (
+                    <div key={i} className="flex gap-3 items-center py-1.5 border-b border-border/30 last:border-0">
+                      <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <span className="text-xs text-primary font-medium w-10 shrink-0">
+                        {new Date(ev.start_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })}
+                      </span>
+                      <span className="text-xs text-foreground font-light truncate">{ev.event_title}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground/50 font-light italic">Sin eventos hoy. KAWA los crea automáticamente desde el chat.</p>
+              )}
+            </div>
+
+            {/* Quick nav */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Proyectos", href: "/vault/operator", icon: Briefcase, color: "text-indigo-400" },
+                { label: "Contexto", href: "/vault/context", icon: Brain, color: "text-violet-400" },
+                { label: "Bienestar", href: "/vault/founder", icon: Heart, color: "text-rose-400" },
+                { label: "Contactos", href: "/vault/contacts", icon: Users, color: "text-amber-400" },
+              ].map((link, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigate(link.href)}
+                  className="flex items-center justify-between p-3 bg-card border border-border rounded-xl hover:border-primary/30 transition-all group text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <link.icon className={`w-3.5 h-3.5 ${link.color}`} strokeWidth={1.5} />
+                    <span className="text-xs text-foreground">{link.label}</span>
+                  </div>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground/30 group-hover:text-primary transition-colors" />
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+
+        {/* ── COMPANY VISION BAR ── */}
+        {companies.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
+            className="bg-card border border-border rounded-xl p-5 overflow-hidden relative group"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-primary" /> Visión Estratégica por Empresa
+                </h2>
+                <p className="text-[10px] text-muted-foreground font-light">Tus objetivos a largo plazo</p>
+              </div>
+              <TrendingUp className="w-4 h-4 text-primary/30 group-hover:text-primary transition-colors" />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {companies.slice(0, 3).map((comp, idx) => (
+                <div key={comp.id} className="relative p-3 rounded-lg bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] transition-colors">
+                  <div className="absolute top-0 left-0 w-1 h-full rounded-l-lg" style={{ backgroundColor: comp.color }} />
+                  <h3 className="text-[11px] font-bold text-foreground mb-1 truncate">{comp.name}</h3>
+                  <p className="text-[10px] text-muted-foreground font-light line-clamp-2 italic">"{comp.vision || "Sin visión..."}"</p>
+                </div>
+              ))}
+              {companies.length > 3 && (
+                <button
+                  onClick={() => navigate("/vault/companies")}
+                  className="p-3 rounded-lg border border-dashed border-border flex items-center justify-center text-[10px] text-muted-foreground hover:text-primary hover:border-primary/50 transition-all"
+                >
+                  Ver {companies.length - 3} más →
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── CTA si no hay empresas ── */}
+        {companies.length === 0 && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}>
+            <CreateCompanyDialog onCompanyCreated={() => window.location.reload()}>
+              <button
+                className="w-full text-left px-5 py-4 rounded-xl border border-dashed border-primary/30 text-sm text-muted-foreground hover:border-primary/60 hover:text-foreground transition-all flex items-center justify-between"
+              >
+                <span>🏢 Crea tu primera Empresa para definir su Visión y Misión estratégica</span>
+                <ArrowRight className="w-4 h-4 shrink-0" />
+              </button>
+            </CreateCompanyDialog>
+          </motion.div>
+        )}
+
       </div>
     </div>
   );

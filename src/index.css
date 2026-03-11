@@ -67,28 +67,29 @@
     @apply bg-background text-foreground font-body antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-display font-bold tracking-tight;
   }
 }
 
 /* Andean geometric pattern - subtle Wari textile inspired */
 .andean-pattern {
-  background-image: 
-    repeating-linear-gradient(
-      60deg,
+  background-image:
+    repeating-linear-gradient(60deg,
       transparent,
       transparent 40px,
       var(--pattern-color) 40px,
-      var(--pattern-color) 41px
-    ),
-    repeating-linear-gradient(
-      -60deg,
+      var(--pattern-color) 41px),
+    repeating-linear-gradient(-60deg,
       transparent,
       transparent 40px,
       var(--pattern-color) 40px,
-      var(--pattern-color) 41px
-    );
+      var(--pattern-color) 41px);
 }
 
 /* Neon glow effects */
@@ -109,13 +110,36 @@ html {
 ::-webkit-scrollbar {
   width: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: hsl(0 0% 2%);
 }
+
 ::-webkit-scrollbar-thumb {
   background: hsl(0 0% 20%);
   border-radius: 3px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(345 100% 56% / 0.5);
+}
+
+/* ── Mobile optimizations ─────────────────────────────────── */
+
+/* Remove tap highlight on interactive elements */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe area inset utilities for notched phones */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent horizontal overflow on mobile */
+@media (max-width: 768px) {
+  body {
+    overflow-x: hidden;
+  }
 }

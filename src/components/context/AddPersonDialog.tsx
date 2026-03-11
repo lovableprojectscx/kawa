@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Briefcase, User } from "lucide-react";
+import { UserPlus, Briefcase, User, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { generateEmbedding } from "@/lib/gemini";
 import { toast } from "sonner";
 
 interface AddPersonDialogProps {
@@ -32,47 +33,25 @@ export const AddPersonDialog = ({ onPersonAdded, children }: AddPersonDialogProp
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error("No user");
 
-            // Process facts (split by comma and trim)
-            // Note: in the real schema we might store this as text or array. 
-            // The schema says personal_facts VECTOR(1536) but also we likely want a readable field.
-            // Wait, looking at schema_design.sql:
-            // personal_facts VECTOR(1536) -- This is for embeddings. 
-            // We probably need a field for storing the raw text facts too to display them?
-            // checking schema again...
-            // "personal_facts VECTOR(1536)" is strictly vector.
-            // "last_interaction_summary TEXT" exists.
-            // We might need to store facts in a JSONB or text field if we want to read them back directly without search.
-            // The schema in schema_design.sql is: 
-            /*
-            CREATE TABLE IF NOT EXISTS public.vault_context_people (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
-                name TEXT NOT NULL,
-                role TEXT, 
-                linked_project_id UUID REFERENCES public.vault_operator_projects(id),
-                personal_facts VECTOR(1536), 
-                last_interaction_summary TEXT,
-                created_at TIMESTAMPTZ DEFAULT now(),
-                updated_at TIMESTAMPTZ DEFAULT now()
-            );
-            */
-            // Ideally we should have a `facts` text/json column. 
-            // For now, I will start by storing facts in `last_interaction_summary` or just assume we modify schema later?
-            // Actually, let's just use `role` and `name` and `last_interaction_summary` for now since that matches the current schema best.
-            // Or I can add a `facts` JSONB column if I want to match the UI perfectly.
-            // Given the user constraint "fix things", I should probably stick to existing schema or slightly adapt.
-            // Let's check if I can insert into a nonexistent column? No.
-            // I'll put facts into `last_interaction_summary` for now as a workaround or just ignore facts for the DB insert if columns missing.
-            // Wait, I can see `vault_context_people` has `last_interaction_summary`.
-            // I'll put the "Facts" into `last_interaction_summary` for simplicity in V1 for now, or append them.
+            // Build the text to embed as personal_facts
+            // Combines role, company hints and the user-entered key facts
+            const factsText = [
+                role ? `Rol: ${role}` : null,
+                factsInput.trim() ? `Datos clave: ${factsInput}` : null,
+            ].filter(Boolean).join(". ");
+
+            // Generate vector embedding for semantic search
+            // If no facts were entered, personal_facts stays null
+            const personalFactsVector = factsText ? await generateEmbedding(factsText) : null;
 
             const { error } = await supabase
                 .from('vault_context_people')
                 .insert({
                     user_id: user.id,
-                    name: name,
+                    name: name.trim(),
                     role: role,
-                    last_interaction_summary: summary + (factsInput ? `\n\nDatos clave: ${factsInput}` : "")
+                    last_interaction_summary: summary.trim() || null,
+                    personal_facts: personalFactsVector,   // VECTOR column — properly embedded
                 });
 
             if (error) throw error;
@@ -80,7 +59,7 @@ export const AddPersonDialog = ({ onPersonAdded, children }: AddPersonDialogProp
             toast.success("Contacto guardado");
             setOpen(false);
 
-            // Reset
+            // Reset form
             setName("");
             setSummary("");
             setFactsInput("");
@@ -93,6 +72,7 @@ export const AddPersonDialog = ({ onPersonAdded, children }: AddPersonDialogProp
             setLoading(false);
         }
     };
+
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>

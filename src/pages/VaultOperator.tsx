@@ -1,13 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
-import { Plus, Calendar, ListTodo, Clock, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar, ListTodo, Briefcase, Plus } from "lucide-react";
 import { toast } from "sonner";
 import ProjectList from "@/components/operator/ProjectList";
 import CapacityMeter from "@/components/operator/CapacityMeter";
 import { CreateProjectDialog } from "@/components/operator/CreateProjectDialog";
+import { CapacityConfigModal } from "@/components/operator/CapacityConfigModal";
 
 const CAPACITY_KEY = "kawa_capacity_config";
 
@@ -16,7 +15,7 @@ const VaultOperator = () => {
   const [projectListKey, setProjectListKey] = useState(0);
   const [stats, setStats] = useState({
     activeProjects: 0,
-    completedTasks: 0,
+    pendingTasksCount: 0,
     hoursAvailable: 40,
     hoursCommitted: 0,
   });
@@ -38,12 +37,14 @@ const VaultOperator = () => {
     }
   }, []);
 
-  const saveCapacityConfig = () => {
-    localStorage.setItem(CAPACITY_KEY, JSON.stringify({ available: hoursAvailable, perProject: hoursPerProject }));
+  const handleSaveCapacity = (available: number, perProject: number) => {
+    setHoursAvailable(available);
+    setHoursPerProject(perProject);
+    localStorage.setItem(CAPACITY_KEY, JSON.stringify({ available, perProject }));
     setStats(prev => ({
       ...prev,
-      hoursAvailable,
-      hoursCommitted: prev.activeProjects * hoursPerProject,
+      hoursAvailable: available,
+      hoursCommitted: prev.activeProjects * perProject,
     }));
     setShowCapacityEditor(false);
     toast.success("Configuración guardada");
@@ -84,7 +85,7 @@ const VaultOperator = () => {
 
       setStats({
         activeProjects: activeCount || 0,
-        completedTasks: taskCount || 0,
+        pendingTasksCount: taskCount || 0,
         hoursAvailable: configAvailable,
         hoursCommitted: (activeCount || 0) * configPerProject,
       });
@@ -152,13 +153,14 @@ const VaultOperator = () => {
           <div className="bg-card/50 backdrop-blur-sm border border-white/10 p-6 rounded-xl hover:border-primary/30 transition-colors">
             <div className="flex items-center gap-4 mb-2">
               <div className="p-3 bg-primary/20 rounded-lg text-primary">
-                <Clock className="w-6 h-6" />
+                <Briefcase className="w-6 h-6" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Proyectos Activos</p>
                 <h3 className="text-2xl font-bold">{stats.activeProjects}</h3>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground font-light">En progreso ahora mismo</p>
           </div>
 
           <div className="bg-card/50 backdrop-blur-sm border border-white/10 p-6 rounded-xl hover:border-amber-400/30 transition-colors">
@@ -168,9 +170,10 @@ const VaultOperator = () => {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Tareas Pendientes</p>
-                <h3 className="text-2xl font-bold">{stats.completedTasks}</h3>
+                <h3 className="text-2xl font-bold">{stats.pendingTasksCount}</h3>
               </div>
             </div>
+            <p className="text-xs text-muted-foreground font-light">Sin completar en todos los proyectos</p>
           </div>
         </div>
 
@@ -199,54 +202,14 @@ const VaultOperator = () => {
         <ProjectList key={projectListKey} />
       </motion.div>
 
-      {/* Capacity Config Modal */}
-      <AnimatePresence>
-        {showCapacityEditor && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={() => setShowCapacityEditor(false)}
-              className="absolute inset-0 bg-background/80 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="relative bg-card border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl"
-            >
-              <div className="flex items-center justify-between mb-5">
-                <h3 className="text-lg font-display font-semibold text-foreground">Configurar Capacidad</h3>
-                <button onClick={() => setShowCapacityEditor(false)} className="text-muted-foreground hover:text-foreground">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5 block">Horas disponibles por semana</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={168}
-                    value={hoursAvailable}
-                    onChange={e => setHoursAvailable(Math.max(1, parseInt(e.target.value) || 40))}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1.5 block">Horas promedio por proyecto activo</label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={hoursPerProject}
-                    onChange={e => setHoursPerProject(Math.max(1, parseInt(e.target.value) || 10))}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Estimado comprometido: {stats.activeProjects} proyectos × {hoursPerProject}h = <strong>{stats.activeProjects * hoursPerProject}h</strong>
-                </p>
-                <Button onClick={saveCapacityConfig} className="w-full">Guardar</Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <CapacityConfigModal
+        isOpen={showCapacityEditor}
+        onClose={() => setShowCapacityEditor(false)}
+        onSave={handleSaveCapacity}
+        initialAvailable={hoursAvailable}
+        initialPerProject={hoursPerProject}
+        activeProjects={stats.activeProjects}
+      />
     </div>
   );
 };

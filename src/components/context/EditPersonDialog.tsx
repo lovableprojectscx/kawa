@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Trash2, User } from "lucide-react";
+import { Trash2, User, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { generateEmbedding } from "@/lib/gemini";
 import { toast } from "sonner";
 
 interface Contact {
@@ -28,12 +29,14 @@ export const EditPersonDialog = ({ contact, open, onOpenChange, onPersonUpdated 
     const [name, setName] = useState("");
     const [role, setRole] = useState("Socia");
     const [summary, setSummary] = useState("");
+    const [factsInput, setFactsInput] = useState("");
 
     useEffect(() => {
         if (contact) {
             setName(contact.name);
             setRole(contact.role || "Socia");
             setSummary(contact.last_interaction_summary || "");
+            setFactsInput("");
         }
     }, [contact]);
 
@@ -41,9 +44,27 @@ export const EditPersonDialog = ({ contact, open, onOpenChange, onPersonUpdated 
         if (!contact || !name.trim()) return toast.error("El nombre es obligatorio");
         setLoading(true);
         try {
+            // Build the rich text for embedding
+            const factsText = [
+                role ? `Rol: ${role}` : null,
+                factsInput.trim() ? `Datos clave: ${factsInput}` : null,
+                summary.trim() ? `Contexto: ${summary}` : null,
+            ].filter(Boolean).join(". ");
+
+            const personalFactsVector = factsText ? await generateEmbedding(factsText) : null;
+
+            const updateData: Record<string, any> = {
+                name: name.trim(),
+                role,
+                last_interaction_summary: summary.trim() || null,
+            };
+            if (personalFactsVector) {
+                updateData.personal_facts = personalFactsVector;
+            }
+
             const { error } = await supabase
                 .from("vault_context_people")
-                .update({ name, role, last_interaction_summary: summary })
+                .update(updateData)
                 .eq("id", contact.id);
 
             if (error) throw error;
@@ -66,7 +87,6 @@ export const EditPersonDialog = ({ contact, open, onOpenChange, onPersonUpdated 
                 .from("vault_context_people")
                 .delete()
                 .eq("id", contact.id);
-
             if (error) throw error;
             toast.success("Contacto eliminado");
             onOpenChange(false);
@@ -110,6 +130,7 @@ export const EditPersonDialog = ({ contact, open, onOpenChange, onPersonUpdated 
                                     <SelectItem value="Proveedor">Proveedor</SelectItem>
                                     <SelectItem value="Mentora">Mentora/or</SelectItem>
                                     <SelectItem value="Equipo">Equipo</SelectItem>
+                                    <SelectItem value="Inversor">Inversor/a</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
@@ -119,24 +140,33 @@ export const EditPersonDialog = ({ contact, open, onOpenChange, onPersonUpdated 
                         <Label>Resumen / Contexto</Label>
                         <Textarea
                             placeholder="¿En qué están trabajando? ¿Cuál fue la última interacción?"
-                            className="h-24 resize-none"
+                            className="h-20 resize-none"
                             value={summary}
                             onChange={(e) => setSummary(e.target.value)}
                         />
                     </div>
+
+                    <div className="grid gap-2">
+                        <Label>Datos Clave (separar por comas)</Label>
+                        <Input
+                            placeholder="Ej. Vegano, Cumpleaños 15 Marzo, CEO de Empresa X"
+                            value={factsInput}
+                            onChange={(e) => setFactsInput(e.target.value)}
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                            Al guardar, KAWA generará un embedding semántico de estos datos.
+                        </p>
+                    </div>
                 </div>
 
                 <DialogFooter className="flex justify-between">
-                    <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={handleDelete}
-                        disabled={loading}
-                    >
+                    <Button variant="destructive" size="sm" onClick={handleDelete} disabled={loading}>
                         <Trash2 className="w-4 h-4 mr-2" /> Eliminar
                     </Button>
                     <Button onClick={handleSave} disabled={loading} className="bg-sky-500 hover:bg-sky-600">
-                        {loading ? "Guardando..." : "Guardar Cambios"}
+                        {loading ? (
+                            <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Procesando...</>
+                        ) : "Guardar Cambios"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

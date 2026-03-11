@@ -1,13 +1,12 @@
 import {
   MessageSquare,
-  LayoutDashboard,
   CalendarDays,
-  Upload,
   Telescope,
   Heart,
   Globe,
-  Bookmark,
   Briefcase,
+  LayoutDashboard,
+  Building2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -17,19 +16,16 @@ export interface NavItem {
   label: string;
 }
 
-// Daily-use items in the fixed bottom bar
-export const mainItems: NavItem[] = [
-  { to: "/chat", icon: MessageSquare, label: "Chat IA" },
+// All nav pages
+export const navItems: NavItem[] = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/chat", icon: MessageSquare, label: "Chat IA" },
   { to: "/vault/operator", icon: Briefcase, label: "Proyectos" },
-  { to: "/vault/founder", icon: Heart, label: "Bienestar" },
+  { to: "/vault/companies", icon: Building2, label: "Empresas" },
+  { to: "/vault/context", icon: Globe, label: "Contexto" },
+  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
 ];
 
-// Secondary items in the "Más" sheet
-export const vaultItems: NavItem[] = [
-  { to: "/vault/vision", icon: Telescope, label: "Estrategia" },
-  { to: "/vault/context", icon: Globe, label: "Contactos" },
-  { to: "/calendar", icon: CalendarDays, label: "Calendario" },
-  { to: "/insights", icon: Bookmark, label: "Insights" },
-  { to: "/upload", icon: Upload, label: "Subir Datos" },
-];
+// Keep legacy exports so existing imports don't break
+export const mainItems = navItems.slice(0, 4);
+export const vaultItems = navItems.slice(4);

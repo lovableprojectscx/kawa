@@ -31,8 +31,8 @@ const AppSidebar = () => {
   return (
     <aside className="fixed left-0 top-0 h-screen w-52 bg-background border-r border-border/50 flex flex-col z-50 hidden md:flex">
       {/* Logo */}
-      <div className="px-5 h-14 flex items-center border-b border-border/50">
-        <span className="font-display font-bold text-lg text-foreground tracking-widest">KAWA</span>
+      <div className="px-5 h-16 flex items-center border-b border-border/50">
+        <img src="/kawa-logo.png" alt="KAWA Logo" className="h-8 w-auto filter brightness-110" />
       </div>
 
       {/* Nav */}

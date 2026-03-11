@@ -27,27 +27,16 @@ export function LandingNav() {
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
           ? "bg-[#050505]/80 backdrop-blur-2xl border-b border-white/[0.06]"
           : ""
-      }`}
+        }`}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="relative w-8 h-8">
-              <div className="absolute inset-0 bg-primary rounded-xl blur-md opacity-60 group-hover:opacity-90 transition-opacity" />
-              <div className="relative w-8 h-8 bg-gradient-to-br from-primary to-rose-700 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white font-display font-black text-base leading-none">
-                  K
-                </span>
-              </div>
-            </div>
-            <span className="font-display font-bold text-white text-lg tracking-tight">
-              KAWA
-            </span>
+          <Link to="/" className="flex items-center gap-2 group">
+            <img src="/kawa-logo.png" alt="KAWA" className="h-9 w-auto" />
           </Link>
 
           {/* Desktop nav */}

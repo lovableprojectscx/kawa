@@ -106,12 +106,12 @@ function VisionVisual() {
       <div className="relative bg-[#0a0a0a] border border-white/[0.08] rounded-2xl p-6 space-y-4">
         <div className="flex items-center gap-2 mb-2">
           <Target className="w-4 h-4 text-primary" />
-          <span className="text-white font-semibold text-sm">Bóveda de Visión</span>
+          <span className="text-white font-semibold text-sm">Visión por Empresa</span>
         </div>
         {/* North Star */}
         <div className="bg-primary/[0.08] border border-primary/20 rounded-xl p-4">
-          <p className="text-primary text-[10px] font-semibold tracking-widest uppercase mb-1">Norte Estrella</p>
-          <p className="text-white text-sm font-semibold">Llegar a $1M ARR con un equipo de 5 personas</p>
+          <p className="text-primary text-[10px] font-semibold tracking-widest uppercase mb-1">Visión Estratégica</p>
+          <p className="text-white text-sm font-semibold">Lanzar KAWA como el orquestador líder para fundadores</p>
           <div className="flex items-center gap-2 mt-3">
             <div className="flex-1 h-1.5 bg-white/[0.06] rounded-full overflow-hidden">
               <div className="h-full w-[68%] bg-gradient-to-r from-primary to-rose-500 rounded-full" />
@@ -404,13 +404,13 @@ export default function FeaturesPage() {
       <FeatureSection
         badge="Vault Vision"
         icon={Target}
-        title="Tu Norte siempre en el horizonte"
-        description="Define lo que importa, blinda lo que no harás, y deja que KAWA te avise cuando una decisión se desvía del camino que elegiste."
+        title="Tu estrategia siempre en el horizonte"
+        description="Define la visión, misión y límites de cada una de tus empresas. KAWA te ayuda a mantener el foco y te avisa cuando una decisión se desvía del camino."
         features={[
-          { icon: Target, title: "Norte Estrella con OKRs", desc: "Registra tu objetivo principal con indicadores clave y mide el avance semana a semana." },
-          { icon: Shield, title: "Anti-metas como guardianes", desc: "Define lo que no harás. KAWA detecta cuando una oportunidad contradice tus límites estratégicos." },
-          { icon: TrendingUp, title: "Score de coherencia", desc: "Un indicador vivo que calcula qué tan alineadas están tus últimas decisiones con tu Norte." },
-          { icon: Sparkles, title: "Alertas de desalineación", desc: "Notificaciones proactivas cuando algo en tu operación parece ir contra tu estrategia." },
+          { icon: Target, title: "Visión y Misión", desc: "Registra el propósito y la dirección a largo plazo de cada entidad de negocio." },
+          { icon: Shield, title: "Anti-metas", desc: "Define lo que NO harás. KAWA detecta cuando una oportunidad contradice tus límites estratégicos." },
+          { icon: TrendingUp, title: "Alineación", desc: "Asegura que cada proyecto esté vinculado a una empresa y a su visión central." },
+          { icon: Sparkles, title: "Contexto estratégico", desc: "La IA utiliza la visión de la empresa seleccionada para darte respuestas personalizadas." },
         ]}
         visual={<VisionVisual />}
         color="text-primary"
@@ -427,7 +427,7 @@ export default function FeaturesPage() {
         features={[
           { icon: Layers, title: "Kanban drag & drop", desc: "Tres columnas: Backlog, Activos y Terminados. Mueve tarjetas con fluidez." },
           { icon: BarChart3, title: "Gestión de capacidad", desc: "Configura cuántas horas puedes trabajar esta semana y KAWA ajusta las recomendaciones." },
-          { icon: Clock, title: "Deadlines y prioridades", desc: "Etiquetas de prioridad (Alta / Media / Baja) y fechas límite con alertas automáticas." },
+          { icon: Clock, title: "Cronograma y prioridades", desc: "Etiquetas de prioridad (Alta / Media / Baja) y fechas límite para no perder el foco." },
           { icon: Calendar, title: "Vista de agenda", desc: "Eventos del calendario integrados en la misma vista para planificar sin cambiar de app." },
         ]}
         visual={<OperatorVisual />}
@@ -481,10 +481,10 @@ export default function FeaturesPage() {
         title="Un chat que sabe todo sobre tu negocio"
         description="No es ChatGPT con un wrapper. KAWA tiene acceso a tus 4 bóvedas, tus documentos y tu historial completo para respuestas que importan."
         features={[
-          { icon: Brain, title: "Chat con contexto total", desc: "Cada respuesta tiene en cuenta tu visión, proyectos activos, energía del día y tu red de contactos." },
-          { icon: Upload, title: "RAG sobre tus documentos", desc: "Sube PDFs, notas y contratos. El sistema los indexa con embeddings para respuestas precisas." },
-          { icon: Sparkles, title: "Smart Router automático", desc: "KAWA detecta el tipo de consulta y actualiza las bóvedas relevantes sin que tengas que indicarlo." },
-          { icon: MessageSquare, title: "Memoria persistente", desc: "Cada conversación enriquece tu contexto. KAWA se vuelve más preciso con cada semana que pasa." },
+          { icon: Brain, title: "Chat con contexto total", desc: "Cada respuesta tiene en cuenta tus empresas, proyectos activos y red de contactos." },
+          { icon: Upload, title: "RAG Cognitivo (Beta)", desc: "Capacidad de procesar y recordar información técnica y estratégica de tu negocio." },
+          { icon: Sparkles, title: "Memoria Inteligente", desc: "KAWA detecta automáticamente datos clave en tus conversaciones y actualiza tu contexto." },
+          { icon: MessageSquare, title: "Evolución continua", desc: "Cada interacción mejora el modelo de contexto, haciendo a KAWA más preciso cada semana." },
         ]}
         visual={<AiVisual />}
         color="text-violet-400"

@@ -45,9 +45,7 @@ export const MobileSidebar = () => {
         <div className="h-full flex flex-col">
           {/* Header */}
           <div className="h-16 flex items-center px-6 border-b border-border">
-            <span className="font-display font-extrabold text-xl tracking-widest text-foreground neon-text-glow">
-              KAWA
-            </span>
+            <img src="/kawa-logo.png" alt="KAWA Logo" className="h-8 w-auto filter brightness-110" />
           </div>
 
           {/* Nav */}

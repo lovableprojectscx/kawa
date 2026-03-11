@@ -50,6 +50,7 @@ const plans = [
   },
   {
     id: "pro",
+    description: "Este producto se encuentra en fase **Beta / Early Access**. El feedback de nuestros fundadores iniciales está dando forma al futuro de KAWA.",
     name: "Pro",
     tagline: "Para fundadores en modo construcción",
     price: { monthly: 29, yearly: 22 },
@@ -103,6 +104,12 @@ const comparisonRows = [
   { label: "Contactos en Contexto", starter: "5", pro: "Ilimitados", team: "Ilimitados" },
   { label: "Smart Router", starter: false, pro: true, team: true },
   { label: "Análisis de burnout", starter: false, pro: true, team: true },
+  { label: "Visión por cada empresa", starter: false, pro: true, team: true },
+  { label: "Gestión de Multi-Empresa", starter: false, pro: true, team: true },
+  { label: "Bóveda de Operador (Kanban)", starter: false, pro: true, team: true },
+  { label: "Bóveda del Fundador (Energía)", starter: true, pro: true, team: true },
+  { label: "Contexto de Contactos", starter: true, pro: true, team: true },
+  { label: "Chat de IA con memoria Básica", starter: true, pro: true, team: true },
   { label: "Miembros del equipo", starter: "1", pro: "1", team: "Hasta 5" },
   { label: "Soporte", starter: "Comunidad", pro: "Email", team: "Prioritario" },
 ];
@@ -147,11 +154,10 @@ function PricingCard({ plan, yearly, delay }: { plan: typeof plans[0]; yearly: b
       viewport={{ once: true, margin: "-60px" }}
       custom={delay}
       variants={fadeUp}
-      className={`relative flex flex-col rounded-2xl p-6 border transition-all duration-300 ${
-        isHighlighted
+      className={`relative flex flex-col rounded-2xl p-6 border transition-all duration-300 ${isHighlighted
           ? "bg-[#0e0a0c] border-primary/30 shadow-2xl shadow-primary/10"
           : "bg-[#0a0a0a] border-white/[0.08] hover:border-white/[0.14]"
-      }`}
+        }`}
     >
       {isHighlighted && (
         <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -242,17 +248,15 @@ export default function PricingPage() {
             <div className="inline-flex items-center gap-3 bg-white/[0.04] border border-white/[0.08] rounded-full p-1">
               <button
                 onClick={() => setYearly(false)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
-                  !yearly ? "bg-white text-black" : "text-white/50 hover:text-white"
-                }`}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all ${!yearly ? "bg-white text-black" : "text-white/50 hover:text-white"
+                  }`}
               >
                 Mensual
               </button>
               <button
                 onClick={() => setYearly(true)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
-                  yearly ? "bg-white text-black" : "text-white/50 hover:text-white"
-                }`}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${yearly ? "bg-white text-black" : "text-white/50 hover:text-white"
+                  }`}
               >
                 Anual
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${yearly ? "bg-emerald-500/20 text-emerald-600" : "bg-emerald-500/15 text-emerald-400"}`}>

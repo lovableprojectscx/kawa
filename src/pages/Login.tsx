@@ -71,8 +71,8 @@ const Login = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="z-10 w-full max-w-md space-y-8 bg-card/50 backdrop-blur-xl p-8 rounded-2xl border border-white/10 shadow-2xl"
             >
-                <div className="text-center space-y-2">
-                    <h1 className="text-4xl font-extrabold tracking-tight text-foreground">KAWA</h1>
+                <div className="text-center space-y-4">
+                    <img src="/kawa-logo.png" alt="KAWA" className="h-14 w-auto mx-auto mb-2" />
                     <p className="text-muted-foreground">{isSignUp ? "Crea tu cuenta" : "Ingresa a tu segunda mente"}</p>
                 </div>
 

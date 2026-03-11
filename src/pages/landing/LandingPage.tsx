@@ -127,17 +127,15 @@ function AppMockup() {
             {[
               { label: "Dashboard", active: true, dot: "bg-primary" },
               { label: "Chat IA", active: false, dot: "bg-white/20" },
-              { label: "Operador", active: false, dot: "bg-white/20" },
-              { label: "Visión", active: false, dot: "bg-white/20" },
-              { label: "Fundador", active: false, dot: "bg-white/20" },
+              { label: "Proyectos", active: false, dot: "bg-white/20" },
+              { label: "Empresas", active: false, dot: "bg-white/20" },
               { label: "Contexto", active: false, dot: "bg-white/20" },
-              { label: "Insights", active: false, dot: "bg-white/20" },
+              { label: "Fundador", active: false, dot: "bg-white/20" },
             ].map((item) => (
               <div
                 key={item.label}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${
-                  item.active ? "bg-white/[0.08] text-white" : "text-white/35"
-                }`}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-md ${item.active ? "bg-white/[0.08] text-white" : "text-white/35"
+                  }`}
               >
                 <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.dot}`} />
                 <span style={{ fontSize: "10px" }}>{item.label}</span>
@@ -162,10 +160,10 @@ function AppMockup() {
             {/* 4 vault cards */}
             <div className="grid grid-cols-2 gap-2 mb-3">
               {[
-                { label: "Visión", metric: "92%", sub: "Alineado", color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
-                { label: "Operador", metric: "3", sub: "proyectos activos", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-                { label: "Fundador", metric: "4/5", sub: "energía hoy ⚡", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+                { label: "Empresas", metric: "2", sub: "entidades", color: "text-primary", bg: "bg-primary/10", border: "border-primary/20" },
+                { label: "Proyectos", metric: "3", sub: "activos", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
                 { label: "Contexto", metric: "24", sub: "contactos clave", color: "text-sky-400", bg: "bg-sky-500/10", border: "border-sky-500/20" },
+                { label: "Fundador", metric: "4/5", sub: "energía hoy ⚡", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
               ].map((v) => (
                 <div key={v.label} className={`${v.bg} border ${v.border} rounded-lg p-2.5`}>
                   <p className="text-white/40" style={{ fontSize: "8px" }}>{v.label}</p>
@@ -352,7 +350,7 @@ export default function LandingPage() {
           >
             Tu copiloto IA para{" "}
             <span className="bg-gradient-to-r from-primary via-rose-400 to-orange-400 bg-clip-text text-transparent">
-              construir sin quemarte
+              construir múltiples negocios sin quemarte
             </span>
           </motion.h1>
 
@@ -363,14 +361,13 @@ export default function LandingPage() {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-center text-white/50 text-lg md:text-xl leading-relaxed max-w-2xl mx-auto mb-10"
           >
-            KAWA conecta tu visión estratégica, proyectos, bienestar y red de
-            contactos en un solo orquestador — y te habla cuando más lo
-            necesitas.
+            KAWA orquesta todas tus empresas, proyectos, bienestar y red de
+            contactos en un solo lugar — dándote claridad estratégica
+            cuando más la necesitas.
           </motion.p>
 
           {/* CTA buttons */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16"
@@ -399,10 +396,10 @@ export default function LandingPage() {
       {/* ─── STATS ─────────────────────────────────────────────────────────── */}
       <section className="py-20 px-6 border-t border-white/[0.05]">
         <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-12">
-          <Stat value="500+" label="Fundadores activos" delay={0} />
+          <Stat value="Early" label="Acceso beta" delay={0} />
           <Stat value="4" label="Bóvedas integradas" delay={0.1} />
-          <Stat value="98%" label="Satisfacción reportada" delay={0.2} />
-          <Stat value="3x" label="Más decisiones alineadas" delay={0.3} />
+          <Stat value="24/7" label="Memoria IA" delay={0.2} />
+          <Stat value="∞" label="Focos de negocio" delay={0.3} />
         </div>
       </section>
 
@@ -500,8 +497,8 @@ export default function LandingPage() {
               icon={Target}
               name="Bóveda de Visión"
               tagline="Vault Vision"
-              description="Tu norte estratégico siempre visible. Define tu Gran Objetivo, tus anti-metas y OKRs. KAWA te alerta cuando una decisión se desvía del camino."
-              features={["Norte Estrella + Anti-metas", "OKRs con seguimiento IA", "Alertas de desalineación", "Coherencia decisional"]}
+              description="Define la visión, misión y límites de cada una de tus empresas. KAWA te ayuda a mantener el foco en lo que realmente mueve la aguja en cada entidad."
+              features={["Visión y Misión por empresa", "Anti-metas (Lo que NO harás)", "Alineación estratégica", "Contexto por entidad"]}
               color="text-primary"
               bg="bg-primary/[0.07]"
               border="border-primary/[0.15]"
@@ -512,7 +509,7 @@ export default function LandingPage() {
               name="Bóveda de Operador"
               tagline="Vault Operator"
               description="Kanban inteligente para fundadores. Gestiona proyectos, tareas y deadlines. La IA optimiza tu carga de trabajo según tu energía real."
-              features={["Kanban drag & drop", "Gestión de capacidad", "Deadline tracking", "Priorización por energía"]}
+              features={["Kanban por proyectos", "Gestión de carga de trabajo", "Vinculación con empresas", "Priorización inteligente"]}
               color="text-emerald-400"
               bg="bg-emerald-500/[0.07]"
               border="border-emerald-500/[0.15]"
@@ -592,11 +589,10 @@ export default function LandingPage() {
                       className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                     >
                       <div
-                        className={`max-w-[85%] px-4 py-2.5 rounded-xl text-sm leading-relaxed ${
-                          msg.role === "user"
+                        className={`max-w-[85%] px-4 py-2.5 rounded-xl text-sm leading-relaxed ${msg.role === "user"
                             ? "bg-primary/20 border border-primary/20 text-white/90"
                             : "bg-white/[0.05] border border-white/[0.08] text-white/70"
-                        }`}
+                          }`}
                       >
                         {msg.text}
                       </div>
@@ -656,8 +652,8 @@ export default function LandingPage() {
                   },
                   {
                     icon: TrendingUp,
-                    title: "Smart Router inteligente",
-                    desc: "Detecta automáticamente el tipo de consulta y la dirige a la bóveda más relevante para actualizar tu contexto.",
+                    title: "Smart Memory",
+                    desc: "Recuerda el contexto de tus proyectos y contactos para darte respuestas coherentes con tu realidad.",
                     color: "text-sky-400",
                     bg: "bg-sky-500/10",
                   },

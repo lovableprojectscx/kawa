@@ -1,18 +1,50 @@
 import { supabase } from "./supabase";
 
 export const generateText = async (prompt: string, systemInstruction?: string): Promise<string> => {
-  const { data, error } = await supabase.functions.invoke("gemini-chat", {
-    body: { message: prompt, systemInstruction, model: "gemini-2.5-flash" },
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const response = await fetch(`${projectUrl}/functions/v1/gemini-chat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ message: prompt, systemInstruction, model: "gemini-2.5-flash" }),
   });
-  if (error) throw new Error(error.message || "Failed to generate text");
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Gemini API Error:", response.status, errorText);
+    throw new Error(`Error ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
   return data.text;
 };
 
 export const generateEmbedding = async (text: string): Promise<number[]> => {
-  const { data, error } = await supabase.functions.invoke("gemini-embed", {
-    body: { text },
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token || import.meta.env.VITE_SUPABASE_ANON_KEY;
+  const projectUrl = import.meta.env.VITE_SUPABASE_URL;
+
+  const response = await fetch(`${projectUrl}/functions/v1/gemini-embed`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify({ text }),
   });
-  if (error) throw new Error(error.message || "Failed to generate embedding");
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Embed API Error:", response.status, errorText);
+    throw new Error(`Error ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
   return data.embedding;
 };
 

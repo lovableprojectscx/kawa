@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
-import { Telescope, Ban, Heart, ArrowRight, Check, Folder } from "lucide-react";
+import { Building2, Ban, Heart, ArrowRight, Check } from "lucide-react";
 
 interface OnboardingWizardProps {
     onComplete: () => void;
@@ -17,14 +17,14 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    // Step 1 — Estrategia
-    const [northStar, setNorthStar] = useState("");
+    // Step 1 — Primera Empresa
+    const [companyName, setCompanyName] = useState("");
+    const [companyVision, setCompanyVision] = useState("");
+    const [companyMission, setCompanyMission] = useState("");
+
+    // Step 2 — Límites (Anti-goals)
     const [antiGoals, setAntiGoals] = useState<string[]>([]);
     const [currentAntiGoal, setCurrentAntiGoal] = useState("");
-
-    // Step 2 — Primer Proyecto
-    const [projectName, setProjectName] = useState("");
-    const [projectDescription, setProjectDescription] = useState("");
 
     // Step 3 — Primer Check-in
     const [mood, setMood] = useState("3");
@@ -39,9 +39,10 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
         if (!user) return;
 
         const { data } = await supabase
-            .from("vault_vision")
+            .from("vault_companies")
             .select("id")
             .eq("user_id", user.id)
+            .limit(1)
             .maybeSingle();
 
         if (!data) setOpen(true);
@@ -64,34 +65,21 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Guardar Visión
-            const { error: visionError } = await supabase
-                .from("vault_vision")
-                .upsert({
+            // 1. Guardar Empresa
+            const { error: companyError } = await supabase
+                .from("vault_companies")
+                .insert({
                     user_id: user.id,
-                    north_star: northStar,
+                    name: companyName.trim(),
+                    vision: companyVision.trim() || null,
+                    mision: companyMission.trim() || null,
                     anti_goals: antiGoals.length > 0 ? antiGoals : [],
-                    why_story: "",
-                    updated_at: new Date().toISOString(),
-                }, { onConflict: "user_id" });
+                    color: "#6366f1", // default color
+                });
 
-            if (visionError) throw visionError;
+            if (companyError) throw companyError;
 
-            // 2. Guardar Primer Proyecto (si fue definido)
-            if (projectName.trim()) {
-                const { error: projectError } = await supabase
-                    .from("vault_operator_projects")
-                    .insert({
-                        user_id: user.id,
-                        name: projectName.trim(),
-                        description: projectDescription.trim() || null,
-                        status: "active",
-                        priority: 4,
-                    });
-                if (projectError) throw projectError;
-            }
-
-            // 3. Guardar Primer Check-in de Energía
+            // 2. Guardar Primer Check-in de Energía
             const { error: energyError } = await supabase
                 .from("vault_founder_energy")
                 .insert({
@@ -104,7 +92,7 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
 
             if (energyError) throw energyError;
 
-            toast.success("¡Bienvenido a KAWA! Tu base está lista 🚀");
+            toast.success("¡Bienvenido a KAWA! Tu primera empresa está configurada 🚀");
             setOpen(false);
             onComplete();
 
@@ -118,96 +106,100 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
 
     const TOTAL_STEPS = 3;
 
-    const canAdvanceStep1 = northStar.trim().length > 0;
-    const canAdvanceStep2 = projectName.trim().length > 0;
+    const canAdvanceStep1 = companyName.trim().length > 0;
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent className="sm:max-w-[500px] [&>button]:hidden">
                 <DialogHeader>
                     <DialogTitle className="text-2xl text-center font-display mb-2">
-                        {step === 1 && "🎯 Definamos tu Norte"}
-                        {step === 2 && "📁 Tu Primer Proyecto"}
+                        {step === 1 && "🏢 Tu Primera Empresa"}
+                        {step === 2 && "🛡️ Establece Límites"}
                         {step === 3 && "⚡ ¿Cómo llegas hoy?"}
                     </DialogTitle>
                 </DialogHeader>
 
                 <div className="py-4">
-                    {/* Step 1 — North Star + Anti-Goals */}
+                    {/* Step 1 — Primera Empresa */}
                     {step === 1 && (
                         <div className="space-y-5 animate-in fade-in slide-in-from-right-4">
                             <div className="flex justify-center">
                                 <div className="p-4 bg-primary/10 rounded-full">
-                                    <Telescope className="w-10 h-10 text-primary" />
+                                    <Building2 className="w-10 h-10 text-primary" />
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <Label>¿Cuál es tu Gran Objetivo ahora mismo?</Label>
-                                <Textarea
-                                    placeholder="Ej. Lanzar mi MVP antes de julio y conseguir 10 clientes de pago..."
-                                    className="h-24"
-                                    value={northStar}
-                                    onChange={(e) => setNorthStar(e.target.value)}
+                                <Label>Nombre de tu empresa / proyecto principal</Label>
+                                <Input
+                                    placeholder="Ej. KAWA Corp, Freelance Studio..."
+                                    value={companyName}
+                                    onChange={(e) => setCompanyName(e.target.value)}
+                                    autoFocus
                                 />
-                                <p className="text-xs text-muted-foreground font-light">
-                                    Esto guiará todas las decisiones que KAWA te ayude a tomar.
-                                </p>
                             </div>
                             <div className="space-y-2">
-                                <Label className="flex items-center gap-1.5">
-                                    <Ban className="w-3.5 h-3.5 text-destructive" /> ¿Qué NO harás? (opcional)
-                                </Label>
+                                <Label>Visión a futuro (opcional)</Label>
+                                <Textarea
+                                    placeholder="¿Dónde estará esta empresa en 3-5 años?"
+                                    className="h-20"
+                                    value={companyVision}
+                                    onChange={(e) => setCompanyVision(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Misión actual (opcional)</Label>
+                                <Textarea
+                                    placeholder="¿Qué hace la empresa hoy y para quién?"
+                                    className="h-20"
+                                    value={companyMission}
+                                    onChange={(e) => setCompanyMission(e.target.value)}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground font-light text-center">
+                                Esta será tu base para organizar proyectos e interacciones.
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Step 2 — Límites */}
+                    {step === 2 && (
+                        <div className="space-y-5 animate-in fade-in slide-in-from-right-4">
+                            <div className="flex justify-center">
+                                <div className="p-4 bg-rose-500/10 rounded-full">
+                                    <Ban className="w-10 h-10 text-rose-500" />
+                                </div>
+                            </div>
+                            <div className="text-center space-y-1 mb-4">
+                                <h3 className="font-medium text-foreground">Lo que tu empresa NO hará</h3>
+                                <p className="text-xs text-muted-foreground">Establece límites para mantener el enfoque (Anti-metas).</p>
+                            </div>
+                            
+                            <div className="space-y-2">
                                 <div className="flex gap-2">
                                     <Input
-                                        placeholder="Ej. No trabajar fines de semana..."
+                                        placeholder="Ej. No aceptar proyectos por menos de 500$..."
                                         value={currentAntiGoal}
                                         onChange={(e) => setCurrentAntiGoal(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && addAntiGoal()}
                                     />
                                     <Button type="button" variant="secondary" onClick={addAntiGoal}>Añadir</Button>
                                 </div>
-                                <div className="space-y-1.5 max-h-24 overflow-y-auto">
+                                <div className="space-y-1.5 max-h-40 overflow-y-auto mt-4">
                                     {antiGoals.map((goal, i) => (
-                                        <div key={i} className="flex items-center justify-between px-3 py-1.5 bg-destructive/5 border border-destructive/20 rounded-md">
-                                            <span className="text-sm text-muted-foreground truncate">{goal}</span>
+                                        <div key={i} className="flex items-center justify-between px-3 py-2 bg-destructive/5 border border-destructive/20 rounded-md">
+                                            <span className="text-sm text-muted-foreground">{goal}</span>
                                             <button onClick={() => removeAntiGoal(i)} className="text-muted-foreground hover:text-destructive ml-2 shrink-0">
-                                                <Ban className="w-3 h-3" />
+                                                <Ban className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
                                     ))}
+                                    {antiGoals.length === 0 && (
+                                        <div className="text-center p-4 border border-dashed rounded-lg text-xs text-muted-foreground/60 italic">
+                                            Sin límites definidos aún. Puedes dejarlos para más adelante.
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* Step 2 — Primer Proyecto */}
-                    {step === 2 && (
-                        <div className="space-y-5 animate-in fade-in slide-in-from-right-4">
-                            <div className="flex justify-center">
-                                <div className="p-4 bg-emerald-400/10 rounded-full">
-                                    <Folder className="w-10 h-10 text-emerald-400" />
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>¿En qué estás trabajando ahora mismo?</Label>
-                                <Input
-                                    placeholder="Ej. Rediseño de landing page para cliente X"
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Descripción breve (opcional)</Label>
-                                <Textarea
-                                    placeholder="¿Cuál es el objetivo de este proyecto?"
-                                    className="h-20 resize-none"
-                                    value={projectDescription}
-                                    onChange={(e) => setProjectDescription(e.target.value)}
-                                />
-                            </div>
-                            <p className="text-xs text-muted-foreground font-light">
-                                Luego podrás añadir tareas, deadlines y más proyectos desde la bóveda de Proyectos.
-                            </p>
                         </div>
                     )}
 
@@ -244,12 +236,12 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                                 <Label>Nivel de energía física</Label>
                                 <div className="flex gap-2">
                                     {(["high", "medium", "low"] as const).map((lvl) => {
-                                        const map = { high: { label: "Alta ⚡", color: "bg-emerald-500 hover:bg-emerald-600" }, medium: { label: "Media 🔋", color: "bg-amber-500 hover:bg-amber-600" }, low: { label: "Baja 🪫", color: "bg-rose-500 hover:bg-rose-600" } };
+                                        const map = { high: { label: "Alta ⚡", color: "bg-emerald-500 hover:bg-emerald-600 font-medium" }, medium: { label: "Media 🔋", color: "bg-amber-500 hover:bg-amber-600 font-medium" }, low: { label: "Baja 🪫", color: "bg-rose-500 hover:bg-rose-600 font-medium" } };
                                         return (
                                             <Button
                                                 key={lvl}
                                                 variant={energy === lvl ? "default" : "outline"}
-                                                className={`flex-1 ${energy === lvl ? map[lvl].color : ""}`}
+                                                className={`flex-1 ${energy === lvl ? map[lvl].color : "text-muted-foreground"}`}
                                                 onClick={() => setEnergy(lvl)}
                                             >
                                                 {map[lvl].label}
@@ -258,15 +250,15 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                                     })}
                                 </div>
                             </div>
-                            <p className="text-xs text-muted-foreground font-light">
-                                KAWA usará esto para ajustar sus sugerencias de carga de trabajo.
+                            <p className="text-xs text-muted-foreground font-light text-center">
+                                KAWA usará esto para ajustar sus sugerencias de carga de trabajo y estilo de comunicación desde el primer día.
                             </p>
                         </div>
                     )}
                 </div>
 
-                <DialogFooter className="flex justify-between sm:justify-between items-center">
-                    <div className="flex gap-1 items-center">
+                <DialogFooter className="flex justify-between sm:justify-between items-center mt-2">
+                    <div className="flex gap-1.5 items-center">
                         {Array.from({ length: TOTAL_STEPS }, (_, i) => (
                             <div
                                 key={i}
@@ -284,12 +276,13 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                         {step < TOTAL_STEPS ? (
                             <Button
                                 onClick={() => setStep(step + 1)}
-                                disabled={(step === 1 && !canAdvanceStep1) || (step === 2 && !canAdvanceStep2)}
+                                disabled={step === 1 && !canAdvanceStep1}
+                                className="bg-primary hover:bg-primary/90"
                             >
                                 Siguiente <ArrowRight className="ml-2 w-4 h-4" />
                             </Button>
                         ) : (
-                            <Button onClick={handleFinish} disabled={loading}>
+                            <Button onClick={handleFinish} disabled={loading} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
                                 {loading ? "Guardando..." : <><Check className="mr-2 w-4 h-4" /> Comenzar con KAWA</>}
                             </Button>
                         )}

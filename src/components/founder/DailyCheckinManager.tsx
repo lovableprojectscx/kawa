@@ -17,13 +17,14 @@ export const DailyCheckinManager = () => {
         if (!user) return;
 
         // No mostrar si el usuario es nuevo (OnboardingWizard ya lo maneja)
-        const { data: visionData } = await supabase
-            .from("vault_vision")
+        const { data: onboardingData } = await supabase
+            .from("vault_companies")
             .select("id")
             .eq("user_id", user.id)
+            .limit(1)
             .maybeSingle();
 
-        if (!visionData) {
+        if (!onboardingData) {
             setChecked(true);
             return;
         }

@@ -1,7 +1,8 @@
 const https = require('https');
 const fs = require('fs');
 
-const key = "AIzaSyCR1GlAmhdmr9YJVrbHQW3wqBaNwbpvlS8";
+const key = process.env.GOOGLE_API_KEY; // Leer de variable de entorno
+
 const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`;
 
 console.log(`Fetching from: ${url.replace(key, 'KEY')}`);

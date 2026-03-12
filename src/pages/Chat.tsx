@@ -58,6 +58,7 @@ const Chat = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [userCompanies, setUserCompanies] = useState<any[]>([]);
 
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [input, setInput] = useState("");
@@ -83,9 +84,13 @@ const Chat = () => {
       if (!user) return;
       setUserId(user.id);
 
-      // Load sessions
-      const existingSessions = await chatService.getSessions(user.id);
+      // Load sessions and companies
+      const [existingSessions, { data: companiesData }] = await Promise.all([
+        chatService.getSessions(user.id),
+        supabase.from("vault_companies").select("*").eq("user_id", user.id)
+      ]);
       setSessions(existingSessions || []);
+      setUserCompanies(companiesData || []);
 
       // Check context from URL for preloaded queries
       const contextType = searchParams.get("context");
@@ -407,46 +412,78 @@ const Chat = () => {
                     {pendingExtraction.type === 'event' && <Calendar className="w-4 h-4 text-sky-400" />}
                     {pendingExtraction.type === 'contact' && <UserPlus className="w-4 h-4 text-amber-400" />}
                     {pendingExtraction.type === 'memory' && <Brain className="w-4 h-4 text-violet-400" />}
+                    {pendingExtraction.type === 'project' && <BrainCircuit className="w-4 h-4 text-emerald-400" />}
+                    {pendingExtraction.type === 'task' && <CheckCheck className="w-4 h-4 text-emerald-400" />}
                     <p className="text-xs font-semibold text-foreground">
-                      {pendingExtraction.type === 'event' && '📅 KAWA detectó un evento — ¿guardamos en el calendario?'}
-                      {pendingExtraction.type === 'contact' && '👤 KAWA detectó un contacto — ¿guardamos en tu red?'}
-                      {pendingExtraction.type === 'memory' && '🧠 KAWA detectó contexto importante — ¿guardamos en el Cerebro?'}
+                      {pendingExtraction.type === 'event' && '📅 KAWA detectó un evento — revisa y guarda en el calendario'}
+                      {pendingExtraction.type === 'contact' && '👤 KAWA detectó un contacto — revisa y guarda en tu red'}
+                      {pendingExtraction.type === 'memory' && '🧠 KAWA detectó contexto importante — revisa y guarda en el Cerebro'}
+                      {pendingExtraction.type === 'project' && '💼 KAWA detectó un nuevo proyecto — revisa y guarda'}
+                      {pendingExtraction.type === 'task' && '✅ KAWA detectó una nueva tarea — revisa y guarda'}
                     </p>
                   </div>
 
                   {/* Fields preview */}
                   <div className="bg-background/60 rounded-xl p-3 space-y-1.5 border border-border/40">
                     {Object.entries(pendingExtraction.data)
-                      .filter(([k, v]) => v && k !== 'workspace')
+                      .filter(([k, v]) => v && !['workspace', 'task_project_id', 'memory_type', 'event_type'].includes(k))
                       .map(([key, value]) => (
                         <div key={key} className="flex gap-2 text-xs">
-                          <span className="text-muted-foreground font-medium min-w-[120px] shrink-0">
+                          <span className="text-muted-foreground font-medium min-w-[120px] shrink-0 pt-1">
                             {{
                               event_title: 'Título',
                               start_time: 'Inicio',
                               end_time: 'Fin',
+                              event_type: 'Tipo de Evento',
                               description: 'Descripción',
                               name: 'Nombre',
                               role: 'Rol',
                               personal_facts: 'Datos personales',
+                              personal_facts_text: 'Datos personales',
                               last_interaction_summary: 'Última interacción',
                               content: 'Contenido',
                               category: 'Categoría',
                               memory_date: 'Fecha',
+                              memory_type: 'Tipo de Memoria',
+                              project_name: 'Nombre del Proyecto',
+                              project_description: 'Descripción',
+                              project_deadline: 'Fecha Límite',
+                              project_priority: 'Prioridad',
+                              task_name: 'Nombre de la Tarea',
+                              task_project_id: 'ID de Proyecto'
                             }[key] || key}:
                           </span>
-                          <span className="text-foreground font-light leading-relaxed">
-                            {key.includes('time') || key.includes('date')
-                              ? (() => { try { return new Date(value as string).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }); } catch { return value as string; } })()
-                              : value as string
-                            }
-                          </span>
+                          <input
+                            type="text"
+                            value={value as string}
+                            onChange={(e) => {
+                              setPendingExtraction({
+                                ...pendingExtraction,
+                                data: {
+                                  ...pendingExtraction.data,
+                                  [key]: e.target.value
+                                }
+                              });
+                            }}
+                            className="text-foreground font-light leading-relaxed bg-transparent border-b border-border/30 focus:border-primary/50 outline-none w-full pb-1 placeholder:text-muted-foreground/30 transition-colors"
+                            placeholder="Añadir valor..."
+                          />
                         </div>
                       ))}
                     {pendingExtraction.workspace && pendingExtraction.workspace !== 'General' && (
                       <div className="flex gap-2 text-xs">
-                        <span className="text-muted-foreground font-medium min-w-[120px] shrink-0">Empresa:</span>
-                        <span className="text-foreground font-light">{pendingExtraction.workspace}</span>
+                        <span className="text-muted-foreground font-medium min-w-[120px] shrink-0 pt-1">Empresa:</span>
+                        <input
+                          type="text"
+                          value={pendingExtraction.workspace}
+                          onChange={(e) => {
+                            setPendingExtraction({
+                              ...pendingExtraction,
+                              workspace: e.target.value
+                            });
+                          }}
+                          className="text-foreground font-light bg-transparent border-b border-border/30 focus:border-primary/50 outline-none w-full pb-1 transition-colors"
+                        />
                       </div>
                     )}
                   </div>
@@ -454,7 +491,7 @@ const Chat = () => {
                   {/* Alignment badge */}
                   {pendingExtraction.alignment && (
                     <p className="text-[10px] text-muted-foreground/60 pl-1">
-                      Alineación con tu Norte: {pendingExtraction.alignment.score}/5 · {pendingExtraction.alignment.reasoning?.slice(0, 80)}{(pendingExtraction.alignment.reasoning?.length ?? 0) > 80 ? '…' : ''}
+                      Alineado a tu Visión: {pendingExtraction.alignment.score}/5 · {pendingExtraction.alignment.reasoning?.slice(0, 80)}{(pendingExtraction.alignment.reasoning?.length ?? 0) > 80 ? '…' : ''}
                     </p>
                   )}
 
@@ -462,7 +499,8 @@ const Chat = () => {
                   <div className="flex gap-2 pt-1">
                     <button
                       onClick={async () => {
-                        const ok = await confirmAndSave(pendingExtraction);
+                        const lastMsg = messages[messages.length - 1]?.text || "";
+                        const ok = await confirmAndSave(pendingExtraction, lastMsg, userCompanies);
                         if (ok) setPendingExtraction(null);
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"

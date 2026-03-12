@@ -329,7 +329,7 @@ const CalendarPage = () => {
                         {new Date(ev.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                       </span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-display tracking-wider uppercase bg-primary/10 text-primary">
-                        {ev.type}
+                        {({ meeting: 'Reunión', call: 'Llamada', task: 'Tarea', deadline: 'Entrega', block: 'Foco' } as Record<string,string>)[ev.type] || ev.type}
                       </span>
                     </div>
                   </div>

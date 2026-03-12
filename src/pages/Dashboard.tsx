@@ -2,16 +2,17 @@ import { motion } from "framer-motion";
 import {
   ArrowRight, Target, Briefcase, Heart, Users, Zap,
   TrendingUp, CheckCircle2, Clock, MessageSquare, Calendar as CalendarIcon,
-  Brain, Flame, Building2
+  Brain, Flame, Building2, HelpCircle
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+  XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer
 } from "recharts";
 import { CreateCompanyDialog } from "@/components/operator/CreateCompanyDialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -210,22 +211,56 @@ const Dashboard = () => {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
             {[
               { icon: Building2, label: "Empresas", value: companies.length || "—", sub: "unidades", color: "text-violet-400", href: "/vault/companies" },
-              { icon: Target, label: "Alineación", value: companies.length > 0 ? `${alignmentScore}%` : "—", sub: "estratégica", color: "text-primary", href: "/vault/companies" },
+              {
+                id: "alignment",
+                icon: Target,
+                label: "Alineación",
+                value: companies.length > 0 ? `${alignmentScore}%` : "—",
+                sub: "estratégica",
+                color: "text-primary",
+                href: "/vault/companies"
+              },
               { icon: CheckCircle2, label: "Tareas", value: pendingTasks || "—", sub: "pendientes", color: "text-sky-400", href: "/vault/operator" },
               { icon: Heart, label: "Energía", value: latestEnergy ? `${latestEnergy.mood}/5` : "—", sub: latestEnergy ? (latestEnergy.level === "high" ? "⚡ Alta" : latestEnergy.level === "medium" ? "😐 Media" : "😴 Baja") : "sin registro", color: "text-rose-400", href: "/vault/founder" },
               { icon: Users, label: "Contactos", value: contactsCount || "—", sub: "en tu red", color: "text-amber-400", href: "/vault/contacts" },
-            ].map((card, i) => (
-              <button
-                key={i}
-                onClick={() => navigate(card.href)}
-                className="flex flex-col items-start p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all text-left group"
-              >
-                <card.icon className={`w-4 h-4 ${card.color} mb-2`} strokeWidth={1.5} />
-                <p className="text-xl font-semibold text-foreground">{card.value}</p>
-                <p className="text-xs text-muted-foreground font-light">{card.label}</p>
-                <p className="text-[10px] text-muted-foreground/50">{card.sub}</p>
-              </button>
-            ))}
+            ].map((card, i) => {
+              const CardContent = (
+                <button
+                  onClick={() => navigate(card.href)}
+                  className="w-full flex flex-col items-start p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-all text-left group"
+                >
+                  <card.icon className={`w-4 h-4 ${card.color} mb-2`} strokeWidth={1.5} />
+                  <p className="text-xl font-semibold text-foreground">{card.value}</p>
+                  <div className="flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground font-light">{card.label}</p>
+                    {card.id === "alignment" && <HelpCircle className="w-3 h-3 text-muted-foreground/50" />}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground/50">{card.sub}</p>
+                </button>
+              );
+
+              if (card.id === "alignment") {
+                return (
+                  <TooltipProvider key={i}>
+                    <Tooltip delayDuration={100}>
+                      <TooltipTrigger asChild>
+                        <div>{CardContent}</div>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[250px] space-y-2 p-3 text-xs">
+                        <p className="font-semibold border-b border-border pb-1 mb-1">Cálculo de Alineación</p>
+                        <ul className="space-y-1 font-light list-disc list-inside text-muted-foreground">
+                          <li><span className="text-foreground font-medium">40%</span> base por configurar al menos 1 empresa.</li>
+                          <li><span className="text-foreground font-medium">+10%</span> por cada empresa registrada.</li>
+                          <li><span className="text-foreground font-medium">+5%</span> por cada proyecto activo o en progreso.</li>
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                );
+              }
+
+              return <div key={i}>{CardContent}</div>;
+            })}
           </div>
         </motion.div>
 
@@ -267,7 +302,7 @@ const Dashboard = () => {
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
                   <XAxis dataKey="day" tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
                   <YAxis domain={[0, 5]} tick={{ fontSize: 10, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
+                  <RechartsTooltip content={<CustomTooltip />} />
                   <Area type="monotone" dataKey="mood" name="Ánimo" stroke="#6366f1" strokeWidth={2} fill="url(#moodGrad)" dot={{ fill: "#6366f1", r: 3 }} />
                   <Area type="monotone" dataKey="energy" name="Energía" stroke="#f59e0b" strokeWidth={2} fill="url(#energyGrad)" dot={{ fill: "#f59e0b", r: 3 }} />
                 </AreaChart>
@@ -300,7 +335,7 @@ const Dashboard = () => {
                         <Cell key={i} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(v: number, n: string) => [v, n]} />
+                    <RechartsTooltip formatter={(v: number, n: string) => [v, n]} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="space-y-1.5 mt-2">

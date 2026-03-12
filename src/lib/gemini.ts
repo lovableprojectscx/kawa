@@ -4,16 +4,16 @@ export const generateText = async (prompt: string, systemInstruction?: string): 
   const { data, error } = await supabase.functions.invoke("gemini-chat", {
     body: { message: prompt, systemInstruction, model: "gemini-2.5-flash" },
   });
-  if (error) throw error;
-  return (data as { text: string }).text;
+  if (error) throw new Error(error.message || "Failed to generate text");
+  return data.text;
 };
 
 export const generateEmbedding = async (text: string): Promise<number[]> => {
   const { data, error } = await supabase.functions.invoke("gemini-embed", {
     body: { text },
   });
-  if (error) throw error;
-  return (data as { embedding: number[] }).embedding;
+  if (error) throw new Error(error.message || "Failed to generate embedding");
+  return data.embedding;
 };
 
 export const classifyInput = async (input: string): Promise<string> => {

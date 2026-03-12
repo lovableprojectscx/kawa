@@ -219,37 +219,39 @@ export default function VaultContext() {
                   <p className="text-xs text-muted-foreground/40 mt-1">Cuéntale contexto a KAWA en el chat y se guardarán aquí</p>
                 </div>
               ) : (
-                memories.map((m, i) => (
-                  <motion.div
-                    key={`${m._type}-${m.id}`}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.04 }}
-                    className="group flex items-start gap-4 p-4 rounded-xl bg-card border border-border/60 hover:border-border transition-all"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-display tracking-widest uppercase border ${m._type === "insight"
-                          ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
-                          : "bg-primary/10 text-primary border-primary/20"
-                          }`}>
-                          {m._type === "insight" ? "Insight" : "Memoria"}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {new Date(m._date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
-                        </span>
-                      </div>
-                      <p className="text-sm text-foreground font-light leading-relaxed line-clamp-3">{m.content}</p>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteMemory(m.id, m._type)}
-                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-400 transition-all p-1 shrink-0"
+                <div className="space-y-3">
+                  {memories.map((m, i) => (
+                    <motion.div
+                      key={`${m._type}-${m.id}`}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.04 }}
+                      className="group flex items-start gap-4 p-4 rounded-xl bg-card border border-border/60 hover:border-border transition-all"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </motion.div>
-                ))
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <span className={`text-[9px] px-2 py-0.5 rounded-full font-display tracking-widest uppercase border ${m._type === "insight"
+                            ? "bg-amber-400/10 text-amber-400 border-amber-400/20"
+                            : "bg-primary/10 text-primary border-primary/20"
+                            }`}>
+                            {m._type === "insight" ? "Insight" : "Memoria"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground/50 flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {new Date(m._date).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                          </span>
+                        </div>
+                        <p className="text-sm text-foreground font-light leading-relaxed line-clamp-3">{m.content}</p>
+                      </div>
+                      <button
+                        onClick={() => handleDeleteMemory(m.id, m._type)}
+                        className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-rose-400 transition-all p-1 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </motion.div>
+                  ))}
+                </div>
               )}
             </div>
           )}

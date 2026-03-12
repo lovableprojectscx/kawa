@@ -5,6 +5,7 @@ import { componentTagger } from "lovable-tagger";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: "/",
   server: {
     host: "::",
     port: 8080,
@@ -13,7 +14,7 @@ export default defineConfig(({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: "http://localhost:3000", // Will be handled by vercel dev if used, or can be a custom proxy
+        target: "http://localhost:3000",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, "/api"),
       },

@@ -10,6 +10,11 @@ export const generateText = async (prompt: string, systemInstruction?: string): 
     throw new Error(error.message || "Failed to generate text");
   }
   
+  if (data?.error) {
+    console.error("Backend Error payload:", data.error);
+    throw new Error(`Backend Error: ${data.error}`);
+  }
+  
   return data.text;
 };
 
@@ -21,6 +26,11 @@ export const generateEmbedding = async (text: string): Promise<number[]> => {
   if (error) {
     console.error("Embed API Error details:", error);
     throw new Error(error.message || "Failed to generate embedding");
+  }
+  
+  if (data?.error) {
+    console.error("Backend Error payload:", data.error);
+    throw new Error(`Backend Error: ${data.error}`);
   }
   
   return data.embedding;

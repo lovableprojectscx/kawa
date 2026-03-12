@@ -30,8 +30,8 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Missing auth header" }), {
-        status: 401,
+      return new Response(JSON.stringify({ error: "Missing auth header" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -44,8 +44,8 @@ serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
-        status: 401,
+      return new Response(JSON.stringify({ error: `Auth Error: ${authError?.message || "User not found"}` }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

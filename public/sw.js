@@ -1,19 +1,28 @@
-// Basic service worker for KAWA
-const CACHE_NAME = 'kawa-v1';
-const ASSETS = [
-    '/',
-    '/index.html',
-    '/manifest.json'
-];
+// Self-destructing Service Worker to fix aggressive caching issues
+// This immediately purges old caches and grabs the latest files from the network.
 
 self.addEventListener('install', (e) => {
+    // Force the new service worker to activate immediately
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (e) => {
+    // Delete all existing caches when activated
     e.waitUntil(
-        caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    return caches.delete(cacheName);
+                })
+            );
+        }).then(() => {
+            // Take control of all clients immediately
+            self.clients.claim();
+        })
     );
 });
 
 self.addEventListener('fetch', (e) => {
-    e.respondWith(
-        caches.match(e.request).then((res) => res || fetch(e.request))
-    );
+    // Bypass service worker cache completely, fetch from network
+    e.respondWith(fetch(e.request));
 });

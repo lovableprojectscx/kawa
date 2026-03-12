@@ -257,35 +257,46 @@ export const OnboardingWizard = ({ onComplete }: OnboardingWizardProps) => {
                     )}
                 </div>
 
-                <DialogFooter className="flex justify-between sm:justify-between items-center mt-2">
-                    <div className="flex gap-1.5 items-center">
-                        {Array.from({ length: TOTAL_STEPS }, (_, i) => (
-                            <div
-                                key={i}
-                                className={`h-1.5 rounded-full transition-all ${i + 1 === step ? "w-6 bg-primary" : i + 1 < step ? "w-4 bg-primary/40" : "w-4 bg-muted"}`}
-                            />
-                        ))}
-                    </div>
+                <DialogFooter className="flex justify-between sm:justify-between items-center mt-2 w-full">
+                    <div className="flex gap-4 items-center w-full justify-between">
+                        <div className="flex gap-1.5 items-center">
+                            {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+                                <div
+                                    key={i}
+                                    className={`h-1.5 rounded-full transition-all ${i + 1 === step ? "w-6 bg-primary" : i + 1 < step ? "w-4 bg-primary/40" : "w-4 bg-muted"}`}
+                                />
+                            ))}
+                        </div>
 
-                    <div className="flex gap-2">
-                        {step > 1 && (
-                            <Button variant="outline" onClick={() => setStep(step - 1)} disabled={loading}>
-                                Atrás
-                            </Button>
-                        )}
-                        {step < TOTAL_STEPS ? (
-                            <Button
-                                onClick={() => setStep(step + 1)}
-                                disabled={step === 1 && !canAdvanceStep1}
-                                className="bg-primary hover:bg-primary/90"
+                        <div className="flex gap-2 items-center">
+                            <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-muted-foreground text-xs hover:text-foreground hidden sm:flex" 
+                                onClick={() => { setOpen(false); onComplete(); }}
                             >
-                                Siguiente <ArrowRight className="ml-2 w-4 h-4" />
+                                Saltar
                             </Button>
-                        ) : (
-                            <Button onClick={handleFinish} disabled={loading} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
-                                {loading ? "Guardando..." : <><Check className="mr-2 w-4 h-4" /> Comenzar con KAWA</>}
-                            </Button>
-                        )}
+                            {step > 1 && (
+                                <Button variant="outline" size="sm" onClick={() => setStep(step - 1)} disabled={loading}>
+                                    Atrás
+                                </Button>
+                            )}
+                            {step < TOTAL_STEPS ? (
+                                <Button
+                                    size="sm"
+                                    onClick={() => setStep(step + 1)}
+                                    disabled={step === 1 && !canAdvanceStep1}
+                                    className="bg-primary hover:bg-primary/90"
+                                >
+                                    Siguiente <ArrowRight className="ml-2 w-4 h-4" />
+                                </Button>
+                            ) : (
+                                <Button size="sm" onClick={handleFinish} disabled={loading} className="bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20">
+                                    {loading ? "Guardando..." : <><Check className="mr-2 w-4 h-4" /> Comenzar</>}
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </DialogFooter>
             </DialogContent>

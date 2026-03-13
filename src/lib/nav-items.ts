@@ -21,9 +21,9 @@ export const navItems: NavItem[] = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/chat", icon: MessageSquare, label: "Chat IA" },
   { to: "/vault/operator", icon: Briefcase, label: "Proyectos" },
-  { to: "/vault/companies", icon: Building2, label: "Empresas" },
-  { to: "/vault/context", icon: Globe, label: "Contexto" },
   { to: "/calendar", icon: CalendarDays, label: "Calendario" },
+  { to: "/vault/context", icon: Globe, label: "Contexto" },
+  { to: "/vault/companies", icon: Building2, label: "Empresas" },
 ];
 
 // Keep legacy exports so existing imports don't break
